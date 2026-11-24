@@ -7,9 +7,10 @@ services:
     runtime: node
     plan: free
     region: singapore
-    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile --prod=false && npx -y pnpm@10.28.0 --filter @hisabkhata/api build
-    # Migrations and the idempotent reference-data seed (permissions, plans) run on every start.
-    startCommand: cd apps/api && npx prisma migrate deploy && npx ts-node --transpile-only prisma/seed.ts && node dist/main.js
+    # Migrations and the idempotent reference-data seed (permissions, plans) run once per deploy,
+    # during the build, so a free instance waking from sleep only has to start Node.
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile --prod=false && npx -y pnpm@10.28.0 --filter @hisabkhata/api build && cd apps/api && npx prisma migrate deploy && npx ts-node --transpile-only prisma/seed.ts
+    startCommand: cd apps/api && node dist/main.js
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:

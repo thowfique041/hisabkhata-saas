@@ -37,7 +37,13 @@ async function refreshSession(): Promise<boolean> {
   return refreshing;
 }
 
-type Options = { method?: string; body?: unknown; query?: Record<string, unknown>; raw?: boolean; retry?: boolean };
+type Options = {
+  method?: string;
+  body?: unknown;
+  query?: Record<string, unknown>;
+  raw?: boolean;
+  retry?: boolean;
+};
 
 export function qs(query?: Record<string, unknown>) {
   if (!query) return '';
@@ -59,7 +65,12 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
       ...(opts.body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
       ...(opts.method && opts.method !== 'GET' ? { 'X-CSRF-Token': csrfToken() } : {}),
     },
-    body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
+    body:
+      opts.body === undefined
+        ? undefined
+        : isForm
+          ? (opts.body as FormData)
+          : JSON.stringify(opts.body),
   });
 
   if (res.status === 401 && opts.retry !== false && !path.startsWith('/auth/')) {
@@ -69,7 +80,15 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
     }
   }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ statusCode: res.status, error: res.statusText, message: 'Something went wrong. Please try again.' }));
+    const body = await res.json().catch(() => ({
+      statusCode: res.status,
+      error: res.statusText,
+      // A non-JSON gateway error almost always means the API server is waking up from sleep.
+      message:
+        res.status >= 502 && res.status <= 504
+          ? 'The server is starting up. Please try again in a minute.'
+          : 'Something went wrong. Please try again.',
+    }));
     throw new ApiError(res.status, body);
   }
   if (opts.raw) return res as unknown as T;
@@ -79,10 +98,15 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
 }
 
 /** Downloads a file response (PDF, CSV) using the authenticated session. */
-export async function download(path: string, query?: Record<string, unknown>, fallbackName = 'download') {
+export async function download(
+  path: string,
+  query?: Record<string, unknown>,
+  fallbackName = 'download',
+) {
   const res = await api<Response>(path, { query, raw: true });
   const blob = await res.blob();
-  const name = res.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1] ?? fallbackName;
+  const name =
+    res.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1] ?? fallbackName;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
