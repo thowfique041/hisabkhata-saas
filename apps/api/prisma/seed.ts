@@ -65,35 +65,66 @@ async function main() {
   const groupOf = new Map<string, string>();
   for (const g of PERMISSION_GROUPS) for (const p of g.permissions) groupOf.set(p, g.label);
   for (const key of ALL_PERMISSIONS) {
-    await prisma.permission.upsert({ where: { key }, create: { key, group: groupOf.get(key) }, update: { group: groupOf.get(key) } });
+    await prisma.permission.upsert({
+      where: { key },
+      create: { key, group: groupOf.get(key) },
+      update: { group: groupOf.get(key) },
+    });
   }
   // Existing owner roles always receive newly added permissions.
-  const owners = await prisma.role.findMany({ where: { systemKey: 'OWNER' }, select: { id: true } });
+  const owners = await prisma.role.findMany({
+    where: { systemKey: 'OWNER' },
+    select: { id: true },
+  });
   for (const r of owners) {
-    await prisma.rolePermission.createMany({ data: ALL_PERMISSIONS.map((permissionKey) => ({ roleId: r.id, permissionKey })), skipDuplicates: true });
+    await prisma.rolePermission.createMany({
+      data: ALL_PERMISSIONS.map((permissionKey) => ({ roleId: r.id, permissionKey })),
+      skipDuplicates: true,
+    });
   }
 
   // ---- plans
   for (const p of PLANS) {
-    await prisma.subscriptionPlan.upsert({ where: { code: p.code }, create: p, update: { name: p.name, description: p.description, features: p.features, sortOrder: p.sortOrder } });
+    await prisma.subscriptionPlan.upsert({
+      where: { code: p.code },
+      create: p,
+      update: {
+        name: p.name,
+        description: p.description,
+        features: p.features,
+        sortOrder: p.sortOrder,
+      },
+    });
   }
 
   // ---- super admin
   const { AuthService } = await import('../src/modules/auth/auth.service');
   const auth = app.get(AuthService);
   const adminEmail = (process.env.SEED_SUPERADMIN_EMAIL ?? 'admin@hisabkhata.local').toLowerCase();
-  const adminPassword = process.env.SEED_SUPERADMIN_PASSWORD ?? 'Admin12345';
+  // Never fall back to a well-known password in production.
+  const adminPassword =
+    process.env.SEED_SUPERADMIN_PASSWORD ??
+    (process.env.NODE_ENV === 'production' ? undefined : 'Admin12345');
   const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (!existingAdmin) {
+  if (!adminPassword) {
+    console.log('SEED_SUPERADMIN_PASSWORD not set: skipping super admin creation.');
+  } else if (!existingAdmin) {
     await prisma.user.create({
-      data: { email: adminEmail, name: 'Platform Admin', passwordHash: await auth.hashPassword(adminPassword), isSuperAdmin: true, emailVerifiedAt: new Date() },
+      data: {
+        email: adminEmail,
+        name: 'Platform Admin',
+        passwordHash: await auth.hashPassword(adminPassword),
+        isSuperAdmin: true,
+        emailVerifiedAt: new Date(),
+      },
     });
     console.log(`Super admin created: ${adminEmail}`);
   } else if (!existingAdmin.isSuperAdmin) {
     await prisma.user.update({ where: { id: existingAdmin.id }, data: { isSuperAdmin: true } });
   }
 
-  if (process.env.SEED_DEMO_DATA !== 'false') {
+  const demoDefault = process.env.NODE_ENV === 'production' ? 'false' : 'true';
+  if ((process.env.SEED_DEMO_DATA ?? demoDefault) !== 'false') {
     const { seedDemo } = await import('./seed-demo');
     await seedDemo(app);
   }

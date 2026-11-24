@@ -21,7 +21,10 @@ export const envSchema = z
     JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
     JWT_ACCESS_TTL: z.string().default('15m'),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
-    COOKIE_DOMAIN: z.string().optional().transform((v) => (v ? v : undefined)),
+    COOKIE_DOMAIN: z
+      .string()
+      .optional()
+      .transform((v) => (v ? v : undefined)),
     COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
     MAIL_FROM: z.string().default('HisabKhata <no-reply@hisabkhata.local>'),
@@ -40,15 +43,28 @@ export const envSchema = z
     SSLCOMMERZ_STORE_PASSWORD: z.string().optional(),
     SSLCOMMERZ_SANDBOX: bool.default(true),
 
+    // Number of reverse proxies in front of the API (Render = 1; Vercel rewrite + Render = 2).
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production') {
       if (env.JWT_ACCESS_SECRET.includes('change-me')) {
-        ctx.addIssue({ code: 'custom', path: ['JWT_ACCESS_SECRET'], message: 'Set a real secret in production' });
+        ctx.addIssue({
+          code: 'custom',
+          path: ['JWT_ACCESS_SECRET'],
+          message: 'Set a real secret in production',
+        });
       }
-      if (env.STORAGE_DRIVER === 'cloudinary' && !(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET)) {
-        ctx.addIssue({ code: 'custom', path: ['CLOUDINARY_CLOUD_NAME'], message: 'Cloudinary credentials are required' });
+      if (
+        env.STORAGE_DRIVER === 'cloudinary' &&
+        !(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['CLOUDINARY_CLOUD_NAME'],
+          message: 'Cloudinary credentials are required',
+        });
       }
     }
   });
@@ -58,7 +74,9 @@ export type Env = z.infer<typeof envSchema>;
 export function validateEnv(raw: Record<string, unknown>): Env {
   const parsed = envSchema.safeParse(raw);
   if (!parsed.success) {
-    const lines = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
+    const lines = parsed.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
     throw new Error(`Invalid environment configuration:\n${lines}`);
   }
   return parsed.data;

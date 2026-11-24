@@ -9,7 +9,7 @@ import { AppConfig } from './config/app-config.service';
 export function configureApp(app: INestApplication) {
   const config = app.get(AppConfig);
   const express = app as NestExpressApplication;
-  express.set('trust proxy', 1);
+  express.set('trust proxy', config.get('TRUST_PROXY_HOPS'));
   express.disable('x-powered-by');
 
   app.setGlobalPrefix('api');
@@ -29,7 +29,8 @@ export function configureApp(app: INestApplication) {
   );
   app.use(cookieParser());
   app.enableCors({
-    origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => cb(null, !origin || config.corsOrigins.includes(origin)),
+    origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) =>
+      cb(null, !origin || config.corsOrigins.includes(origin)),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'Authorization', 'X-Request-Id'],

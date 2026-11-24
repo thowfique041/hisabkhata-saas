@@ -1,60 +1,41 @@
-# Render Blueprint for the HisabKhata API (Dashboard > Blueprints > New > pick this repo).
-# Secrets marked sync: false are entered in the Render dashboard, never committed.
+# Render Blueprint for the HisabKhata API (Dashboard > New > Blueprint > pick this repo).
+# Free setup: no Redis (jobs run inline), local file storage (ephemeral), no outgoing email.
+# Add Upstash, Cloudinary and SMTP later; see docs/deployment.md.
 services:
   - type: web
     name: hisabkhata-api
     runtime: node
     plan: free
     region: singapore
-    rootDir: .
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @hisabkhata/shared build && pnpm --filter @hisabkhata/api build
-    startCommand: cd apps/api && npx prisma migrate deploy && node dist/main.js
+    buildCommand: npx -y pnpm@10.28.0 install --frozen-lockfile --prod=false && npx -y pnpm@10.28.0 --filter @hisabkhata/api build
+    # Migrations and the idempotent reference-data seed (permissions, plans) run on every start.
+    startCommand: cd apps/api && npx prisma migrate deploy && npx ts-node --transpile-only prisma/seed.ts && node dist/main.js
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
-        value: "22"
+        value: "22.12.0"
       - key: NODE_ENV
         value: production
-      - key: APP_URL
-        sync: false            # https://<your-vercel-domain>
-      - key: API_URL
-        sync: false            # https://hisabkhata-api.onrender.com
-      - key: CORS_ORIGINS
-        sync: false            # same value as APP_URL
       - key: DATABASE_URL
-        sync: false            # Neon pooled connection string (…-pooler…) with sslmode=require
+        sync: false            # Neon pooled connection string (host contains -pooler)
       - key: DIRECT_DATABASE_URL
-        sync: false            # Neon direct connection string, used for migrations
-      - key: REDIS_URL
-        sync: false            # Upstash: rediss://default:<password>@<host>:6379
-      - key: QUEUES_ENABLED
-        value: "true"
+        sync: false            # Neon direct connection string (no -pooler), used by migrations
+      - key: APP_URL
+        value: https://hisabkhata.vercel.app
+      - key: API_URL
+        value: https://hisabkhata-api.onrender.com
+      - key: CORS_ORIGINS
+        value: https://hisabkhata.vercel.app
+      - key: TRUST_PROXY_HOPS
+        value: "2"
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: COOKIE_SAMESITE
-        value: lax             # the web app proxies /api, so cookies stay first-party
+        value: lax
+      - key: QUEUES_ENABLED
+        value: "false"
       - key: STORAGE_DRIVER
-        value: cloudinary      # Render's disk is ephemeral
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
-      - key: MAIL_FROM
-        sync: false            # e.g. "HisabKhata <no-reply@yourdomain.com>" (verified sender)
-      - key: SMTP_HOST
-        value: smtp-relay.brevo.com
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: SSLCOMMERZ_STORE_ID
-        sync: false
-      - key: SSLCOMMERZ_STORE_PASSWORD
-        sync: false
-      - key: SSLCOMMERZ_SANDBOX
-        value: "true"
+        value: local
+      - key: SEED_DEMO_DATA
+        value: "false"
