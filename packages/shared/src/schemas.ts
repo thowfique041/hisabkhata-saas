@@ -31,18 +31,18 @@ export const phone = z
   .transform(toE164);
 export const optionalPhone = z
   .union([phone, z.literal('')])
-  .optional()
+  .nullish()
   .transform((v) => (v ? v : undefined));
 const optionalText = (max: number) =>
   z
     .string()
     .trim()
     .max(max)
-    .optional()
-    .transform((v) => (v === '' ? undefined : v));
+    .nullish()
+    .transform((v) => (v === '' || v === null ? undefined : v));
 const optionalEmail = z
   .union([z.string().trim().toLowerCase().email(), z.literal('')])
-  .optional()
+  .nullish()
   .transform((v) => (v ? v : undefined));
 export const id = z.string().min(1).max(40);
 export const isoDate = z.coerce.date();

@@ -51,7 +51,11 @@ class AppConfigModule {}
         autoLogging: { ignore: (req) => req.url === '/api/health' },
       },
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 300 }],
+      // Integration tests hammer auth endpoints from one IP; rate limiting has its own test.
+      skipIf: () => process.env.NODE_ENV === 'test' && process.env.THROTTLE_IN_TESTS !== '1',
+    }),
     PrismaModule,
     CoreModule,
     JobsModule,

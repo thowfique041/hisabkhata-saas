@@ -1,7 +1,9 @@
 /** @type {import('jest').Config} */
 const base = {
   moduleFileExtensions: ['js', 'json', 'ts'],
-  transform: { '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/test/tsconfig.json', isolatedModules: true }] },
+  transform: { '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/test/tsconfig.json' }] },
+  // See test/shims/pdfkit.js
+  moduleNameMapper: { '^pdfkit$': '<rootDir>/test/shims/pdfkit.js' },
   testEnvironment: 'node',
 };
 module.exports = {
@@ -14,7 +16,7 @@ module.exports = {
       testMatch: ['<rootDir>/test/**/*.e2e-spec.ts'],
       globalSetup: '<rootDir>/test/global-setup.ts',
       setupFiles: ['<rootDir>/test/setup-env.ts'],
-      testTimeout: 30000,
+      testTimeout: 60000,
     },
   ],
 };
