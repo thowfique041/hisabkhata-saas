@@ -36,7 +36,10 @@ export class JobsService implements OnApplicationBootstrap, OnModuleDestroy {
       });
       this.connection.on('error', (err) => this.logger.error({ err }, 'Redis connection error'));
       for (const q of QUEUES) {
-        this.queues.set(q, new Queue(q, { connection: this.connection, defaultJobOptions: DEFAULT_JOB_OPTS }));
+        this.queues.set(
+          q,
+          new Queue(q, { connection: this.connection, defaultJobOptions: DEFAULT_JOB_OPTS }),
+        );
       }
     }
   }
@@ -65,15 +68,29 @@ export class JobsService implements OnApplicationBootstrap, OnModuleDestroy {
       const worker = new Worker(q, (job) => this.run(job.name, job.data, job), {
         connection: this.connection.duplicate({ maxRetriesPerRequest: null }),
         concurrency: q === 'mail' ? 5 : 2,
+        // Fewer idle round-trips: matters on per-command Redis plans such as Upstash's free tier.
+        drainDelay: 30,
+        stalledInterval: 300_000,
       });
       worker.on('failed', (job, err) =>
-        this.logger.warn({ queue: q, job: job?.name, id: job?.id, attempts: job?.attemptsMade, err: err.message }, 'Job failed'),
+        this.logger.warn(
+          { queue: q, job: job?.name, id: job?.id, attempts: job?.attemptsMade, err: err.message },
+          'Job failed',
+        ),
       );
       this.workers.push(worker);
     }
     const maintenance = this.queues.get('maintenance')!;
-    await maintenance.upsertJobScheduler('subscription-expiry', { pattern: '0 20 * * *' }, { name: 'subscription.expiry-check' });
-    await maintenance.upsertJobScheduler('low-stock-digest', { pattern: '0 3 * * *' }, { name: 'inventory.low-stock-digest' });
+    await maintenance.upsertJobScheduler(
+      'subscription-expiry',
+      { pattern: '0 20 * * *' },
+      { name: 'subscription.expiry-check' },
+    );
+    await maintenance.upsertJobScheduler(
+      'low-stock-digest',
+      { pattern: '0 3 * * *' },
+      { name: 'inventory.low-stock-digest' },
+    );
     this.logger.log('Background workers started');
   }
 

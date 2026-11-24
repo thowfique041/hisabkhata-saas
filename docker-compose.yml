@@ -1,0 +1,77 @@
+# Local development stack.
+#   docker compose up -d postgres redis mailpit     # infrastructure only (run apps with pnpm dev)
+#   docker compose --profile app up --build         # everything in containers
+name: hisabkhata
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hisabkhata
+    ports: ['5432:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d hisabkhata']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports: ['6379:6379']
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # web inbox at http://localhost:8025
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    profiles: [app]
+    build: { context: ., dockerfile: infrastructure/docker/api.Dockerfile }
+    env_file: apps/api/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hisabkhata?schema=public
+      DIRECT_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hisabkhata?schema=public
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      COOKIE_SAMESITE: lax
+      STORAGE_DRIVER: local
+    ports: ['4000:4000']
+    volumes: [uploads:/repo/apps/api/storage]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      mailpit: { condition: service_started }
+
+  web:
+    profiles: [app]
+    build: { context: ., dockerfile: infrastructure/docker/web.Dockerfile }
+    environment:
+      API_ORIGIN: http://api:4000
+    ports: ['3000:3000']
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
