@@ -22,11 +22,11 @@ services:
       - key: DIRECT_DATABASE_URL
         sync: false            # Neon direct connection string (no -pooler), used by migrations
       - key: APP_URL
-        value: https://hisabkhata.vercel.app
+        value: https://hisabkhata-omega.vercel.app
       - key: API_URL
         value: https://hisabkhata-api.onrender.com
       - key: CORS_ORIGINS
-        value: https://hisabkhata.vercel.app
+        value: https://hisabkhata-omega.vercel.app,https://hisabkhata-mtbc.vercel.app
       - key: TRUST_PROXY_HOPS
         value: "2"
       - key: JWT_ACCESS_SECRET
