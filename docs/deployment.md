@@ -67,7 +67,7 @@ SSLCommerz: create a sandbox store, set `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE
 | ------------------------------------------------------------------------------ | ------------------- | -------------------------------------------------------------------- |
 | `NODE_ENV`                                                                     | yes                 | `production`                                                         |
 | `APP_URL`                                                                      | yes                 | `https://hisabkhata.vercel.app` (links in emails, payment redirects) |
-| `API_URL`                                                                      | yes                 | `https://hisabkhata-api.onrender.com` (payment IPN URL)              |
+| `API_URL`                                                                      | yes                 | `https://hisabkhata-api-2r1d.onrender.com` (payment IPN URL)         |
 | `CORS_ORIGINS`                                                                 | yes                 | comma-separated web origins                                          |
 | `DATABASE_URL`                                                                 | yes                 | Neon pooled URL                                                      |
 | `DIRECT_DATABASE_URL`                                                          | yes                 | Neon direct URL (migrations)                                         |

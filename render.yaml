@@ -24,7 +24,7 @@ services:
       - key: APP_URL
         value: https://hisabkhata-omega.vercel.app
       - key: API_URL
-        value: https://hisabkhata-api.onrender.com
+        value: https://hisabkhata-api-2r1d.onrender.com
       - key: CORS_ORIGINS
         value: https://hisabkhata-omega.vercel.app,https://hisabkhata-mtbc.vercel.app
       - key: TRUST_PROXY_HOPS
