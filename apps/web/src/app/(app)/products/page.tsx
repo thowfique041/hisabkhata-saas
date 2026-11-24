@@ -90,7 +90,12 @@ function Products() {
   const router = useRouter();
   const can = useCan();
   const confirm = useConfirm();
-  const list = useList<any>('/products', { search: params.get('search') ?? '', stock: params.get('stock') ?? 'all', archived: 'false', pageSize: 25 });
+  const list = useList<any>('/products', { search: params.get('search') ?? '', stock: params.get('stock') ?? 'all', categoryId: params.get('categoryId') ?? '', archived: 'false', pageSize: 25 });
+  const urlSearch = params.get('search');
+  React.useEffect(() => {
+    if (urlSearch !== null) list.set({ search: urlSearch });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSearch]);
   const categories = useApi<any[]>('/categories');
   const [selected, setSelected] = React.useState<string[]>([]);
   const [panel, setPanel] = React.useState<{ mode: 'new' | 'view' | 'edit'; id?: string; product?: any } | null>(params.get('new') ? { mode: 'new' } : null);

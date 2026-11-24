@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
   }
   return (
     <AuthCard title="Reset your password" description="Enter the email you sign in with and we will send you a reset link." footer={<Link href="/login" className="font-medium text-foreground underline underline-offset-4">Back to sign in</Link>}>
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <form onSubmit={onSubmit} method="post" className="space-y-4" noValidate>
         <FormError message={error} />
         <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" autoFocus {...form.register('email')} />

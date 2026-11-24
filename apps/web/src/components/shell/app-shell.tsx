@@ -293,7 +293,7 @@ export function AppShell({ children, admin }: { children: React.ReactNode; admin
   const [open, setOpen] = React.useState(false);
   return (
     <div className="min-h-screen lg:pl-60">
-      <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-60 lg:block">
+      <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-60 dark:border-r dark:border-white/10 lg:block">
         <SidebarContent admin={admin} />
       </aside>
       <D.Root open={open} onOpenChange={setOpen}>

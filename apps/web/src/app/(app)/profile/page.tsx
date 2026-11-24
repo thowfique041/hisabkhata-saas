@@ -31,7 +31,7 @@ function ProfileForm({ p }: { p: any }) {
     }
   }
   return (
-    <form onSubmit={form.handleSubmit((v) => save.mutate(v))} className="space-y-4 p-4" noValidate>
+    <form onSubmit={form.handleSubmit((v) => save.mutate(v))} method="post" className="space-y-4 p-4" noValidate>
       <div className="flex items-center gap-4">
         <span className="flex size-14 items-center justify-center overflow-hidden rounded-full bg-navy text-lg font-medium text-white">{p.avatarUrl ? <img src={p.avatarUrl} alt="" className="size-full object-cover" /> : p.name[0]}</span>
         <label className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-muted">
@@ -68,7 +68,7 @@ function PasswordForm() {
   });
   const e = form.formState.errors;
   return (
-    <form onSubmit={form.handleSubmit((v) => save.mutate(v))} className="space-y-4 p-4" noValidate>
+    <form onSubmit={form.handleSubmit((v) => save.mutate(v))} method="post" className="space-y-4 p-4" noValidate>
       <Field label="Current password" htmlFor="currentPassword" error={e.currentPassword?.message}>
         <Input id="currentPassword" type="password" autoComplete="current-password" {...form.register('currentPassword')} />
       </Field>

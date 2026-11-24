@@ -45,6 +45,8 @@ const optionalEmail = z
   .nullish()
   .transform((v) => (v ? v : undefined));
 export const id = z.string().min(1).max(40);
+/** Optional reference where an empty select value means "none". */
+const optionalRef = z.preprocess((v) => (v === '' ? null : v), id.nullish());
 export const isoDate = z.coerce.date();
 
 export const password = z
@@ -163,7 +165,7 @@ export const productSchema = z.object({
     .optional()
     .transform((v) => (v ? v.toUpperCase() : undefined)),
   barcode: optionalText(64),
-  categoryId: id.optional().nullable(),
+  categoryId: optionalRef,
   unit: z.string().trim().min(1).max(20).default('pcs'),
   purchasePrice: nonNegMoney,
   sellingPrice: nonNegMoney,
@@ -179,7 +181,7 @@ export const productSchema = z.object({
     .refine((v) => QTY_REGEX.test(v), 'Invalid stock')
     .optional(),
   description: optionalText(1000),
-  imageId: id.optional().nullable(),
+  imageId: optionalRef,
 });
 export type ProductInput = z.infer<typeof productSchema>;
 export const productUpdateSchema = productSchema.omit({ openingStock: true }).partial();
@@ -232,7 +234,7 @@ export const saleItemInputSchema = z.object({
   discount: nonNegMoney.default('0'),
 });
 export const createSaleSchema = z.object({
-  customerId: id.optional().nullable(),
+  customerId: optionalRef,
   items: z.array(saleItemInputSchema).min(1).max(200),
   discount: nonNegMoney.default('0'),
   taxRate: percent.optional(),

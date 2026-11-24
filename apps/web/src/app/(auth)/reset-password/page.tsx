@@ -51,7 +51,7 @@ function ResetForm() {
   }
   return (
     <AuthCard title={invite ? 'Set your password' : 'Choose a new password'} description={invite ? 'You were invited to a business on HisabKhata. Choose a password to finish setting up your account.' : undefined}>
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <form onSubmit={onSubmit} method="post" className="space-y-4" noValidate>
         <FormError message={error} />
         <Field label="New password" htmlFor="password" error={form.formState.errors.password?.message} hint="At least 8 characters with letters and numbers.">
           <Input id="password" type="password" autoComplete="new-password" autoFocus {...form.register('password')} />

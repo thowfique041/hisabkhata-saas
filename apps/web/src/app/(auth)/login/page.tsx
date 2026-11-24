@@ -44,7 +44,7 @@ function LoginForm() {
         </>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <form onSubmit={onSubmit} method="post" className="space-y-4" noValidate>
         <FormError message={error} />
         <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" autoFocus {...form.register('email')} aria-invalid={!!form.formState.errors.email} />

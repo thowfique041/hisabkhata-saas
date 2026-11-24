@@ -51,7 +51,7 @@ function RegisterForm() {
         </>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <form onSubmit={onSubmit} method="post" className="space-y-4" noValidate>
         <FormError message={error} />
         <Field label="Your name" htmlFor="name" error={e.name?.message}>
           <Input id="name" autoComplete="name" {...form.register('name')} aria-invalid={!!e.name} />
