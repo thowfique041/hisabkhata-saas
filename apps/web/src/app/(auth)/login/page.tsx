@@ -16,7 +16,11 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(() =>
+    params.get('offline')
+      ? 'We could not reach the server. It may still be starting up, so please try again in a minute.'
+      : null,
+  );
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },

@@ -19,11 +19,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+  // Wake the API (a free instance sleeps when idle) while the visitor is still reading the page.
+  React.useEffect(() => {
+    fetch('/api/health', { cache: 'no-store' }).catch(() => undefined);
+  }, []);
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={client}>
         <ConfirmProvider>{children}</ConfirmProvider>
-        <Toaster position="bottom-right" richColors closeButton toastOptions={{ className: 'font-sans' }} />
+        <Toaster
+          position="bottom-right"
+          richColors
+          closeButton
+          toastOptions={{ className: 'font-sans' }}
+        />
       </QueryClientProvider>
     </ThemeProvider>
   );

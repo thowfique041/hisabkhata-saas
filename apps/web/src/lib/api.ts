@@ -37,6 +37,27 @@ async function refreshSession(): Promise<boolean> {
   return refreshing;
 }
 
+/** Endpoints where a 401 means "wrong credentials", not "access token expired". */
+const NO_REFRESH = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/token',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/verify-email',
+]);
+
+/** True when the request failed because the API could not be reached (asleep, restarting, offline). */
+export function isUnreachable(err: unknown) {
+  return (
+    !(err instanceof ApiError) ||
+    err.code === 'UNREACHABLE' ||
+    (err.status >= 502 && err.status <= 504)
+  );
+}
+
 type Options = {
   method?: string;
   body?: unknown;
@@ -73,22 +94,30 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
           : JSON.stringify(opts.body),
   });
 
-  if (res.status === 401 && opts.retry !== false && !path.startsWith('/auth/')) {
+  if (res.status === 401 && opts.retry !== false && !NO_REFRESH.has(path)) {
     if (await refreshSession()) return api<T>(path, { ...opts, retry: false });
     if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
       window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     }
   }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({
-      statusCode: res.status,
-      error: res.statusText,
-      // A non-JSON gateway error almost always means the API server is waking up from sleep.
-      message:
-        res.status >= 502 && res.status <= 504
-          ? 'The server is starting up. Please try again in a minute.'
-          : 'Something went wrong. Please try again.',
-    }));
+    // A non-JSON 5xx comes from the proxy, not the API: the API is asleep, restarting or unreachable.
+    const body = await res
+      .json()
+      .catch(() =>
+        res.status >= 500
+          ? {
+              statusCode: res.status,
+              error: res.statusText,
+              code: 'UNREACHABLE',
+              message: 'The server is starting up. Please try again in a minute.',
+            }
+          : {
+              statusCode: res.status,
+              error: res.statusText,
+              message: 'Something went wrong. Please try again.',
+            },
+      );
     throw new ApiError(res.status, body);
   }
   if (opts.raw) return res as unknown as T;
