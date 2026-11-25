@@ -89,10 +89,10 @@ export class StorageService {
           .end(input.buffer);
       }).catch((err: { message?: string; http_code?: number }) => {
         // Cloudinary rejects with a plain object, not an Error; log what it said, never the keys.
-        this.logger.error(
-          { provider: 'cloudinary', httpCode: err?.http_code, reason: err?.message },
-          'Image upload failed',
-        );
+        const detail = { provider: 'cloudinary', httpCode: err?.http_code, reason: err?.message };
+        this.logger.error(detail, 'Image upload failed');
+        // Plain stderr as well: serverless log capture does not always pick up the app logger.
+        console.error('Image upload failed', JSON.stringify(detail));
         throw new ServiceUnavailableException(
           'Could not save the image right now. Please try again later.',
         );
