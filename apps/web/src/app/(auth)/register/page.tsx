@@ -12,7 +12,8 @@ import { titleCase } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input, PasswordInput, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
-import { AuthCard, FormError } from '@/components/auth-form';
+import { AuthCard, ConnectingNotice, FormError } from '@/components/auth-form';
+import { whenApiReady } from '@/lib/wake';
 
 const formSchema = registerSchema
   .extend({ confirmPassword: z.string() })
@@ -27,6 +28,7 @@ function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
+  const [connecting, setConnecting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const form = useForm<Values>({
     resolver: zodResolver(formSchema),
@@ -45,7 +47,10 @@ function RegisterForm() {
   const onSubmit = form.handleSubmit(async ({ confirmPassword: _confirm, ...values }) => {
     setError(null);
     try {
-      await api('/auth/register', { method: 'POST', body: values });
+      await whenApiReady(
+        () => api('/auth/register', { method: 'POST', body: values }),
+        setConnecting,
+      );
       qc.clear();
       router.replace('/dashboard?welcome=1');
     } catch (err) {
@@ -72,6 +77,7 @@ function RegisterForm() {
     >
       <form onSubmit={onSubmit} method="post" className="space-y-4" noValidate>
         <FormError message={error} />
+        <ConnectingNotice show={connecting} />
         <Field label="Your name" htmlFor="name" error={e.name?.message}>
           <Input id="name" autoComplete="name" {...form.register('name')} aria-invalid={!!e.name} />
         </Field>

@@ -1,3 +1,4 @@
+import { ServerAsleepError } from './wake';
 import type { ApiErrorBody } from '@hisabkhata/shared';
 
 export class ApiError extends Error {
@@ -64,6 +65,8 @@ type Options = {
   query?: Record<string, unknown>;
   raw?: boolean;
   retry?: boolean;
+  /** Do not send the browser to /login when the session cannot be refreshed (public pages). */
+  noRedirect?: boolean;
 };
 
 export function qs(query?: Record<string, unknown>) {
@@ -96,28 +99,30 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
 
   if (res.status === 401 && opts.retry !== false && !NO_REFRESH.has(path)) {
     if (await refreshSession()) return api<T>(path, { ...opts, retry: false });
-    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    if (
+      !opts.noRedirect &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login')
+    ) {
       window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     }
   }
   if (!res.ok) {
     // A non-JSON 5xx comes from the proxy, not the API: the API is asleep, restarting or unreachable.
-    const body = await res
-      .json()
-      .catch(() =>
-        res.status >= 500
-          ? {
-              statusCode: res.status,
-              error: res.statusText,
-              code: 'UNREACHABLE',
-              message: 'The server is starting up. Please try again in a minute.',
-            }
-          : {
-              statusCode: res.status,
-              error: res.statusText,
-              message: 'Something went wrong. Please try again.',
-            },
-      );
+    const body = await res.json().catch(() =>
+      res.status >= 500
+        ? {
+            statusCode: res.status,
+            error: res.statusText,
+            code: 'UNREACHABLE',
+            message: 'The server is starting up. Please try again in a minute.',
+          }
+        : {
+            statusCode: res.status,
+            error: res.statusText,
+            message: 'Something went wrong. Please try again.',
+          },
+    );
     throw new ApiError(res.status, body);
   }
   if (opts.raw) return res as unknown as T;
@@ -153,6 +158,7 @@ export async function openPdf(path: string) {
 }
 
 export function errorMessage(err: unknown): string {
+  if (err instanceof ServerAsleepError) return err.message;
   if (err instanceof ApiError) {
     if (err.body?.details?.length) return err.body.details.map((d) => d.message).join('. ');
     return err.message;

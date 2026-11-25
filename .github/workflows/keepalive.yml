@@ -1,0 +1,38 @@
+name: Keep API awake
+
+# The API runs on Render's free plan, which sleeps after 15 minutes without traffic and then needs
+# 30 to 60 seconds to wake. Pinging /api/health every 10 minutes keeps it awake.
+#
+# Off by default. This repository is private, so every run is billed as at least one Actions minute:
+# a 10-minute schedule is about 4,300 minutes a month, more than the 2,000 free minutes.
+# To turn it on: Settings > Secrets and variables > Actions > Variables > New variable
+#   KEEPALIVE_ENABLED = true
+#   KEEPALIVE_URL     = https://hisabkhata-omega.vercel.app/api/health   (optional, this is the default)
+# A free external pinger (cron-job.org, UptimeRobot) does the same job at no cost; see README.
+# Vercel Cron is not an option on the Hobby plan: it only allows one run per day.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    # A skipped job never starts a runner, so it costs nothing while disabled.
+    if: vars.KEEPALIVE_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping health endpoint
+        env:
+          URL: ${{ vars.KEEPALIVE_URL || 'https://hisabkhata-omega.vercel.app/api/health' }}
+        run: |
+          for attempt in 1 2 3 4; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$URL" || true)
+            echo "attempt $attempt: HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 15
+          done
+          echo "::warning::API did not answer with 200 after 4 attempts"

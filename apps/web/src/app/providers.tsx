@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { ApiError } from '@/lib/api';
+import { wakeApi } from '@/lib/wake';
 import { ConfirmProvider } from '@/components/confirm';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -20,9 +21,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
   // Wake the API (a free instance sleeps when idle) while the visitor is still reading the page.
-  React.useEffect(() => {
-    fetch('/api/health', { cache: 'no-store' }).catch(() => undefined);
-  }, []);
+  React.useEffect(() => wakeApi(), []);
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={client}>

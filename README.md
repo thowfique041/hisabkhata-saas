@@ -145,6 +145,23 @@ docker compose --profile app up --build            # API and web in containers t
 
 Web on Vercel, API on Render, Postgres on Neon, Redis on Upstash, images on Cloudinary, email via Brevo or Resend. Step-by-step instructions, free-tier limits and troubleshooting: [docs/deployment.md](docs/deployment.md).
 
+### Keeping the free API awake
+
+Render's free plan puts the API to sleep after 15 minutes without traffic. Waking it takes 30 to 60 seconds, which is longer than Vercel's 30-second proxy timeout. The web app copes with this:
+
+- Pricing uses a static plan list.
+- Forms wait for the server to answer a health check before they submit.
+- Every page load starts waking the API in the background.
+
+To avoid the wait entirely, ping `https://<your-site>/api/health` every 10 minutes. There are two ways:
+
+- **GitHub Actions** (`.github/workflows/keepalive.yml`):
+  - Off by default. To turn it on, set the repository variable `KEEPALIVE_ENABLED=true` under Settings > Secrets and variables > Actions > Variables.
+  - On a private repository each run costs at least one Actions minute. A 10-minute schedule is about 4,300 minutes a month, which is more than the 2,000 free minutes.
+- **A free external pinger** such as cron-job.org or UptimeRobot, set to call the health URL every 10 minutes. This costs nothing and is the recommended option for the free setup.
+
+Vercel Cron cannot do this on the Hobby plan: it only allows one run per day.
+
 ## Security
 
 - Tenant isolation enforced in the guard, in every service query, and by a Prisma scoping extension; verified by automated cross-tenant tests.

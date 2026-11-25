@@ -1,11 +1,35 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PRIVATE = ['/dashboard', '/products', '/categories', '/inventory', '/stock-adjustments', '/sales', '/pos', '/purchases', '/suppliers', '/customers', '/expenses', '/invoices', '/reports', '/employees', '/roles', '/settings', '/subscription', '/profile', '/onboarding', '/super-admin'];
-const AUTH_PAGES = ['/login', '/register'];
+const PRIVATE = [
+  '/dashboard',
+  '/products',
+  '/categories',
+  '/inventory',
+  '/stock-adjustments',
+  '/sales',
+  '/pos',
+  '/purchases',
+  '/suppliers',
+  '/customers',
+  '/expenses',
+  '/invoices',
+  '/reports',
+  '/employees',
+  '/roles',
+  '/settings',
+  '/subscription',
+  '/profile',
+  '/onboarding',
+  '/super-admin',
+];
 
 /**
  * Cheap edge check for a session cookie so private pages never flash for signed-out visitors.
  * Real authorization happens on the API for every request.
+ *
+ * /login and /register are never redirected: the CSRF cookie outlives the access token, so its
+ * presence does not prove a live session, and bouncing to /dashboard made a returning visitor wait
+ * on the API before they could even see the form.
  */
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
@@ -14,12 +38,6 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     url.search = `?next=${encodeURIComponent(pathname + search)}`;
-    return NextResponse.redirect(url);
-  }
-  if (hasSession && AUTH_PAGES.includes(pathname)) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/dashboard';
-    url.search = '';
     return NextResponse.redirect(url);
   }
   return NextResponse.next();
