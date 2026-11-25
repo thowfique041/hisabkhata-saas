@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd ../.. && npx -y pnpm@10.28.0 install --frozen-lockfile --prod=false",
+  "buildCommand": "cd ../.. && npx -y pnpm@10.28.0 --filter @hisabkhata/shared build && npx -y pnpm@10.28.0 --filter @hisabkhata/api build && cd apps/api && npx prisma migrate deploy && npx ts-node --transpile-only prisma/seed.ts",
+  "outputDirectory": "public",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "includeFiles": "{dist/**,assets/**}"
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }]
+}
