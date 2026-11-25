@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  ADJUSTMENT_REASONS,
-  BUSINESS_TYPES,
-  PAYMENT_METHODS,
-  PLAN_FEATURES,
-} from './enums';
+import { ADJUSTMENT_REASONS, BUSINESS_TYPES, PAYMENT_METHODS, PLAN_FEATURES } from './enums';
 import { MONEY_REGEX, QTY_REGEX } from './money';
 import { isValidPhone, toE164 } from './phone';
 import { ALL_PERMISSIONS } from './permissions';
@@ -90,7 +85,10 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export const forgotPasswordSchema = z.object({ email: z.string().trim().toLowerCase().email() });
 export const resetPasswordSchema = z.object({ token: z.string().min(20).max(200), password });
 export const verifyEmailSchema = z.object({ token: z.string().min(20).max(200) });
-export const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: password });
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: password,
+});
 export const switchTenantSchema = z.object({ tenantId: id });
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -184,6 +182,27 @@ export const productSchema = z.object({
   imageId: optionalRef,
 });
 export type ProductInput = z.infer<typeof productSchema>;
+/** One row of a product CSV/Excel import. Category is a name; missing categories are created. */
+export const productImportRowSchema = productSchema
+  .omit({ categoryId: true, imageId: true, description: true })
+  .extend({ category: optionalText(80) });
+export type ProductImportRow = z.infer<typeof productImportRowSchema>;
+export const productImportSchema = z.object({
+  rows: z.array(z.record(z.string(), z.unknown())).min(1).max(1000),
+  dryRun: z.boolean().default(true),
+});
+export const PRODUCT_IMPORT_COLUMNS = [
+  'name',
+  'sku',
+  'barcode',
+  'category',
+  'unit',
+  'purchasePrice',
+  'sellingPrice',
+  'taxRate',
+  'openingStock',
+  'minStock',
+] as const;
 export const productUpdateSchema = productSchema.omit({ openingStock: true }).partial();
 export const productListQuerySchema = listQuerySchema.extend({
   categoryId: z.string().optional(),

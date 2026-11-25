@@ -28,6 +28,8 @@ export function translateMessage(
   if (message === 'Required') return t.validation.required;
   if (message === 'Invalid email') return t.validation.email;
   if (message === 'Passwords do not match') return t.validation.mismatch;
+  const dup = message.match(/^Same (SKU|barcode) as row (\d+)$/);
+  if (dup && t.validation.sameAsRow) return t.validation.sameAsRow(dup[1], Number(dup[2]));
   const min = message.match(/at least (\d+) character/);
   if (min) return Number(min[1]) <= 1 ? t.validation.required : t.validation.min(Number(min[1]));
   const max = message.match(/at most (\d+) character/);

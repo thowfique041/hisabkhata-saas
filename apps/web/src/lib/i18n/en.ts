@@ -505,6 +505,7 @@ export const en = {
     min: (n: number) => `Enter at least ${n} characters`,
     max: (n: number) => `Use ${n} characters or fewer`,
     mismatch: 'Passwords do not match',
+    sameAsRow: (field: string, row: number) => `Same ${field} as row ${row}`,
     // Custom messages from the shared schemas, translated by exact text in bn.ts.
     known: {} as Record<string, string>,
   },

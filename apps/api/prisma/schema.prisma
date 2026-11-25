@@ -391,6 +391,8 @@ model Category {
   name        String
   description String?
   archivedAt  DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -418,6 +420,8 @@ model Product {
   imageId       String?
   imageUrl      String?
   archivedAt    DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -469,6 +473,8 @@ model Customer {
   address    String?
   notes      String?
   archivedAt DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -491,6 +497,8 @@ model Supplier {
   address    String?
   notes      String?
   archivedAt DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -525,6 +533,8 @@ model Sale {
   note           String?
   idempotencyKey String?
   cancelledAt    DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   cancelReason   String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -579,6 +589,8 @@ model Payment {
   customerId String?
   supplierId String?
   userId     String?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   createdAt  DateTime         @default(now())
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -629,6 +641,8 @@ model Purchase {
   note          String?
   userId        String?
   cancelledAt   DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   cancelReason  String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -669,6 +683,8 @@ model ExpenseCategory {
   name        String
   description String?
   archivedAt  DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -689,6 +705,8 @@ model Expense {
   expenseDate DateTime
   userId      String?
   deletedAt   DateTime?
+  /// Sample data from "Load demo data"; "Remove demo data" deletes only these rows.
+  isDemo Boolean @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

@@ -15,7 +15,8 @@ export async function createApp(): Promise<INestApplication> {
 }
 
 let counter = 0;
-export const unique = (prefix = 'u') => `${prefix}${Date.now().toString(36)}${(counter++).toString(36)}`;
+export const unique = (prefix = 'u') =>
+  `${prefix}${Date.now().toString(36)}${(counter++).toString(36)}`;
 
 /**
  * A browser-like client: keeps cookies between requests and echoes the CSRF cookie in the
@@ -44,16 +45,31 @@ export class Client {
     return this.agent.get(`/api${url}`).then((r) => this.capture(r));
   }
   post(url: string, body?: object) {
-    return this.agent.post(`/api${url}`).set('X-CSRF-Token', this.csrf).send(body ?? {}).then((r) => this.capture(r));
+    return this.agent
+      .post(`/api${url}`)
+      .set('X-CSRF-Token', this.csrf)
+      .send(body ?? {})
+      .then((r) => this.capture(r));
   }
   put(url: string, body?: object) {
-    return this.agent.put(`/api${url}`).set('X-CSRF-Token', this.csrf).send(body ?? {}).then((r) => this.capture(r));
+    return this.agent
+      .put(`/api${url}`)
+      .set('X-CSRF-Token', this.csrf)
+      .send(body ?? {})
+      .then((r) => this.capture(r));
   }
   patch(url: string, body?: object) {
-    return this.agent.patch(`/api${url}`).set('X-CSRF-Token', this.csrf).send(body ?? {}).then((r) => this.capture(r));
+    return this.agent
+      .patch(`/api${url}`)
+      .set('X-CSRF-Token', this.csrf)
+      .send(body ?? {})
+      .then((r) => this.capture(r));
   }
   delete(url: string) {
-    return this.agent.delete(`/api${url}`).set('X-CSRF-Token', this.csrf).then((r) => this.capture(r));
+    return this.agent
+      .delete(`/api${url}`)
+      .set('X-CSRF-Token', this.csrf)
+      .then((r) => this.capture(r));
   }
 }
 
@@ -65,7 +81,10 @@ export interface Owner {
   userId: string;
 }
 
-export async function registerOwner(app: INestApplication, opts: { businessName?: string } = {}): Promise<Owner> {
+export async function registerOwner(
+  app: INestApplication,
+  opts: { businessName?: string } = {},
+): Promise<Owner> {
   const client = new Client(app);
   const email = `${unique('owner')}@test.local`;
   const password = 'Passw0rd123';
@@ -76,15 +95,23 @@ export async function registerOwner(app: INestApplication, opts: { businessName?
     businessName: opts.businessName ?? `Shop ${unique()}`,
     businessType: 'RETAIL',
   });
-  if (res.status !== 201) throw new Error(`register failed: ${res.status} ${JSON.stringify(res.body)}`);
+  if (res.status !== 201)
+    throw new Error(`register failed: ${res.status} ${JSON.stringify(res.body)}`);
   const session = await client.get('/auth/session');
-  return { client, email, password, tenantId: session.body.activeTenant.id, userId: session.body.user.id };
+  return {
+    client,
+    email,
+    password,
+    tenantId: session.body.activeTenant.id,
+    userId: session.body.user.id,
+  };
 }
 
 export async function login(app: INestApplication, email: string, password: string) {
   const client = new Client(app);
   const res = await client.post('/auth/login', { email, password });
-  if (res.status !== 200) throw new Error(`login failed: ${res.status} ${JSON.stringify(res.body)}`);
+  if (res.status !== 200)
+    throw new Error(`login failed: ${res.status} ${JSON.stringify(res.body)}`);
   return client;
 }
 
@@ -97,7 +124,8 @@ export async function createProduct(client: Client, over: Record<string, unknown
     minStock: '2',
     ...over,
   });
-  if (res.status !== 201) throw new Error(`product failed: ${res.status} ${JSON.stringify(res.body)}`);
+  if (res.status !== 201)
+    throw new Error(`product failed: ${res.status} ${JSON.stringify(res.body)}`);
   return res.body;
 }
 
@@ -113,4 +141,23 @@ export async function makeSuperAdmin(app: INestApplication) {
   const owner = await registerOwner(app);
   await prisma(app).user.update({ where: { id: owner.userId }, data: { isSuperAdmin: true } });
   return owner;
+}
+
+/** Invites a member with a built-in role and signs them in. */
+export async function addMember(app: INestApplication, owner: Owner, roleKey: string) {
+  const roles = (await owner.client.get('/roles')).body as any[];
+  const role = roles.find((r) => r.systemKey === roleKey)!;
+  const email = `${unique(roleKey.toLowerCase())}@test.local`;
+  const res = await owner.client.post('/employees', {
+    name: `${roleKey} Person`,
+    email,
+    roleId: role.id,
+  });
+  expect(res.status).toBe(201);
+  const invite = mail(app).find((m) => m.to === email && m.template === 'invite')!;
+  const token = new URL(invite.data.link).searchParams.get('token')!;
+  expect(
+    (await new Client(app).post('/auth/reset-password', { token, password: 'Member1234' })).status,
+  ).toBe(200);
+  return { client: await login(app, email, 'Member1234'), email, roleId: role.id };
 }

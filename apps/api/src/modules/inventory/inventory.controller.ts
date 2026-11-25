@@ -1,10 +1,11 @@
-import { Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
   bulkProductActionSchema,
   categorySchema,
   listQuerySchema,
   PERMISSIONS,
+  productImportSchema,
   productListQuerySchema,
   productSchema,
   productUpdateSchema,
@@ -14,12 +15,14 @@ import { RequirePermissions, Tenant, ZBody, ZQuery } from '../../common/decorato
 import type { TenantContext } from '../../common/types';
 import { CategoriesService } from './categories.service';
 import { ProductsService } from './products.service';
+import { ProductImportService } from './product-import.service';
 
 @ApiTags('Inventory')
 @Controller()
 export class InventoryController {
   constructor(
     private readonly products: ProductsService,
+    private readonly importer: ProductImportService,
     private readonly categories: CategoriesService,
   ) {}
 
@@ -38,7 +41,11 @@ export class InventoryController {
 
   @Put('categories/:id')
   @RequirePermissions(PERMISSIONS.CATEGORY_MANAGE)
-  updateCategory(@Tenant() t: TenantContext, @Param('id') id: string, @ZBody(categorySchema) body: any) {
+  updateCategory(
+    @Tenant() t: TenantContext,
+    @Param('id') id: string,
+    @ZBody(categorySchema) body: any,
+  ) {
     return this.categories.update(t, id, body);
   }
 
@@ -67,6 +74,14 @@ export class InventoryController {
     return this.products.get(t.tenantId, id);
   }
 
+  /** CSV/Excel import: the browser sends parsed rows; dryRun returns per-row validation. */
+  @Post('products/import')
+  @HttpCode(200)
+  @RequirePermissions(PERMISSIONS.PRODUCT_MANAGE)
+  importProducts(@Tenant() t: TenantContext, @ZBody(productImportSchema) body: any) {
+    return this.importer.import(t, body.rows, body.dryRun);
+  }
+
   @Post('products')
   @RequirePermissions(PERMISSIONS.PRODUCT_MANAGE)
   create(@Tenant() t: TenantContext, @ZBody(productSchema) body: any) {
@@ -75,7 +90,11 @@ export class InventoryController {
 
   @Patch('products/:id')
   @RequirePermissions(PERMISSIONS.PRODUCT_MANAGE)
-  update(@Tenant() t: TenantContext, @Param('id') id: string, @ZBody(productUpdateSchema) body: any) {
+  update(
+    @Tenant() t: TenantContext,
+    @Param('id') id: string,
+    @ZBody(productUpdateSchema) body: any,
+  ) {
     return this.products.update(t, id, body);
   }
 

@@ -8,6 +8,8 @@ import * as D from '@radix-ui/react-dialog';
 import {
   Bell,
   Check,
+  MailWarning,
+  X,
   ChevronsUpDown,
   LogOut,
   Menu as MenuIcon,
@@ -35,6 +37,7 @@ import { useCan, useSession, useSwitchTenant } from '@/hooks/use-session';
 import { useApi, useAction } from '@/hooks/use-api';
 import { ADMIN_NAV, LABELS, NAV, type NavItem } from './nav';
 import { usePosFullscreen } from '@/lib/pos-fullscreen';
+import { useI18n } from '@/lib/i18n/client';
 
 function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -256,6 +259,10 @@ function Notifications() {
 
 function UserMenu() {
   const { data } = useSession();
+  const { t } = useI18n();
+  const [verifyDismissed] = useVerifyDismissed();
+  const resend = useResendVerification();
+  const needsVerify = !!data && !data.user.emailVerified && verifyDismissed;
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
@@ -289,6 +296,13 @@ function UserMenu() {
           <p className="truncate text-xs text-muted-foreground">{data?.user.email}</p>
         </div>
         <MenuSeparator />
+        {needsVerify && (
+          <MenuItem onSelect={() => resend.mutate(undefined)}>
+            <MailWarning className="text-warning" />{' '}
+            <span className="flex-1">{t.panel.onboarding.confirmEmail}</span>
+            <span className="size-2 rounded-full bg-warning" aria-hidden />
+          </MenuItem>
+        )}
         <MenuItem onSelect={() => router.push('/profile')}>
           <UserRound /> Profile and password
         </MenuItem>
@@ -315,21 +329,65 @@ function UserMenu() {
   );
 }
 
+/** Dismissing the verify banner lasts for this browser session; the account menu keeps a reminder. */
+const verifyListeners = new Set<() => void>();
+function useVerifyDismissed(): [boolean, () => void] {
+  const subscribe = React.useCallback((cb: () => void) => {
+    verifyListeners.add(cb);
+    return () => verifyListeners.delete(cb);
+  }, []);
+  const read = () => {
+    try {
+      return window.sessionStorage.getItem('hk_verify_dismissed') === '1';
+    } catch {
+      return false;
+    }
+  };
+  const dismissed = React.useSyncExternalStore(subscribe, read, () => false);
+  const dismiss = React.useCallback(() => {
+    try {
+      window.sessionStorage.setItem('hk_verify_dismissed', '1');
+    } catch {
+      /* ignore */
+    }
+    verifyListeners.forEach((l) => l());
+  }, []);
+  return [dismissed, dismiss];
+}
+
+function useResendVerification() {
+  const { t } = useI18n();
+  return useAction(() => api('/auth/resend-verification', { method: 'POST' }), {
+    success: t.panel.onboarding.resent,
+  });
+}
+
 function VerifyBanner() {
   const { data } = useSession();
-  const resend = useAction(() => api('/auth/resend-verification', { method: 'POST' }), {
-    success: 'Verification email sent',
-  });
-  if (!data || data.user.emailVerified) return null;
+  const { t } = useI18n();
+  const o = t.panel.onboarding;
+  const resend = useResendVerification();
+  const [dismissed, dismiss] = useVerifyDismissed();
+  if (!data || data.user.emailVerified || dismissed) return null;
   return (
-    <div className="no-print border-b bg-warning/10 px-4 py-2 text-sm text-warning sm:px-6">
-      Confirm your email address to secure your account.{' '}
+    <div className="no-print flex items-center gap-3 border-b bg-warning/10 px-4 py-2 text-sm text-warning sm:px-6">
+      <p className="flex-1">
+        {o.verifyBanner}{' '}
+        <button
+          className="font-medium underline underline-offset-2"
+          onClick={() => resend.mutate(undefined)}
+          disabled={resend.isPending}
+        >
+          {o.resend}
+        </button>
+      </p>
       <button
-        className="font-medium underline underline-offset-2"
-        onClick={() => resend.mutate(undefined)}
-        disabled={resend.isPending}
+        className="shrink-0 rounded-md p-1 hover:bg-warning/15"
+        onClick={dismiss}
+        aria-label={o.dismiss}
+        title={o.dismiss}
       >
-        Resend the email
+        <X className="size-4" />
       </button>
     </div>
   );

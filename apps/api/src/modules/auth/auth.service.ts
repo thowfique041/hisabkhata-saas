@@ -58,7 +58,12 @@ export class AuthService {
       return { user, tenant };
     });
 
-    await this.audit.log({ action: 'auth.register', userId: user.id, tenantId: tenant.id, ...meta });
+    await this.audit.log({
+      action: 'auth.register',
+      userId: user.id,
+      tenantId: tenant.id,
+      ...meta,
+    });
     await this.sendVerification(user.id, user.email);
     await this.mail.enqueue({
       template: 'welcome',
@@ -87,7 +92,8 @@ export class AuthService {
         where: { id: user.id },
         data: {
           failedLogins: failed >= MAX_FAILED_LOGINS ? 0 : failed,
-          lockedUntil: failed >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
+          lockedUntil:
+            failed >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
         },
       });
       await this.audit.log({ action: 'auth.login_failed', userId: user.id, ...meta });
@@ -108,7 +114,10 @@ export class AuthService {
     return this.tokens.issue(user, tenantId, meta);
   }
 
-  private async defaultTenantFor(userId: string, preferred?: string | null): Promise<string | null> {
+  private async defaultTenantFor(
+    userId: string,
+    preferred?: string | null,
+  ): Promise<string | null> {
     const memberships = await this.prisma.membership.findMany({
       where: { userId, status: 'ACTIVE', tenant: { status: 'ACTIVE' } },
       orderBy: { createdAt: 'asc' },
@@ -129,13 +138,20 @@ export class AuthService {
     return issued;
   }
 
-  async switchTenant(auth: { id: string }, tenantId: string, rawRefresh: string | undefined, meta: ClientMetaInfo) {
+  async switchTenant(
+    auth: { id: string },
+    tenantId: string,
+    rawRefresh: string | undefined,
+    meta: ClientMetaInfo,
+  ) {
     const membership = await this.prisma.membership.findUnique({
       where: { userId_tenantId: { userId: auth.id, tenantId } },
       include: { tenant: true, user: true },
     });
-    if (!membership || membership.status !== 'ACTIVE') throw new ForbiddenException('You are not a member of this business');
-    if (membership.tenant.status !== 'ACTIVE') throw new ForbiddenException('This business account is suspended');
+    if (!membership || membership.status !== 'ACTIVE')
+      throw new ForbiddenException('You are not a member of this business');
+    if (membership.tenant.status !== 'ACTIVE')
+      throw new ForbiddenException('This business account is suspended');
     await this.tokens.revokeByRaw(rawRefresh);
     await this.audit.log({ action: 'auth.switch_tenant', userId: auth.id, tenantId, ...meta });
     return this.tokens.issue(membership.user, tenantId, meta);
@@ -167,18 +183,24 @@ export class AuthService {
     const recent = await this.prisma.emailVerificationToken.count({
       where: { userId, createdAt: { gt: new Date(Date.now() - 60_000) } },
     });
-    if (recent) throw new BadRequestException('Please wait a minute before requesting another email');
+    if (recent)
+      throw new BadRequestException('Please wait a minute before requesting another email');
     await this.sendVerification(user.id, user.email);
     return { ok: true };
   }
 
   async verifyEmail(token: string) {
-    const row = await this.prisma.emailVerificationToken.findUnique({ where: { tokenHash: sha256(token) } });
+    const row = await this.prisma.emailVerificationToken.findUnique({
+      where: { tokenHash: sha256(token) },
+    });
     if (!row || row.usedAt || row.expiresAt < new Date()) {
       throw new BadRequestException('This verification link is invalid or has expired');
     }
     await this.prisma.$transaction([
-      this.prisma.emailVerificationToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+      this.prisma.emailVerificationToken.update({
+        where: { id: row.id },
+        data: { usedAt: new Date() },
+      }),
       this.prisma.user.update({ where: { id: row.userId }, data: { emailVerifiedAt: new Date() } }),
     ]);
     await this.audit.log({ action: 'auth.email_verified', userId: row.userId });
@@ -193,7 +215,11 @@ export class AuthService {
     if (user && user.status === 'ACTIVE') {
       const token = randomToken(32);
       await this.prisma.passwordResetToken.create({
-        data: { userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + 30 * 60_000) },
+        data: {
+          userId: user.id,
+          tokenHash: sha256(token),
+          expiresAt: new Date(Date.now() + 30 * 60_000),
+        },
       });
       await this.mail.enqueue({
         template: 'password-reset',
@@ -207,14 +233,22 @@ export class AuthService {
   }
 
   async resetPassword(token: string, password: string, meta: ClientMetaInfo) {
-    const row = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash: sha256(token) } });
+    const row = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash: sha256(token) },
+    });
     if (!row || row.usedAt || row.expiresAt < new Date()) {
       throw new BadRequestException('This reset link is invalid or has expired');
     }
     const passwordHash = await this.hashPassword(password);
     await this.prisma.$transaction([
-      this.prisma.passwordResetToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
-      this.prisma.passwordResetToken.updateMany({ where: { userId: row.userId, usedAt: null }, data: { usedAt: new Date() } }),
+      this.prisma.passwordResetToken.update({
+        where: { id: row.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.passwordResetToken.updateMany({
+        where: { userId: row.userId, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
       // Completing a reset also proves ownership of the mailbox.
       this.prisma.user.update({
         where: { id: row.userId },
@@ -231,7 +265,10 @@ export class AuthService {
     if (!(await argon2.verify(user.passwordHash, current).catch(() => false))) {
       throw new BadRequestException('Current password is incorrect');
     }
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await this.hashPassword(next) } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: await this.hashPassword(next) },
+    });
     await this.tokens.revokeAllForUser(userId);
     await this.audit.log({ action: 'auth.password_changed', userId, ...meta });
     return { ok: true };
@@ -247,7 +284,8 @@ export class AuthService {
       include: { tenant: true, role: { include: { permissions: true } } },
       orderBy: { createdAt: 'asc' },
     });
-    const active = memberships.find((m) => m.tenantId === tenantId && m.tenant.status === 'ACTIVE') ?? null;
+    const active =
+      memberships.find((m) => m.tenantId === tenantId && m.tenant.status === 'ACTIVE') ?? null;
     const current = active ? await this.subscriptions.getCurrent(active.tenantId) : null;
 
     return {
@@ -272,6 +310,7 @@ export class AuthService {
             name: active.tenant.name,
             slug: active.tenant.slug,
             role: active.role.name,
+            roleKey: active.role.systemKey ?? null,
             status: active.tenant.status,
             currency: active.tenant.currency,
             timezone: active.tenant.timezone,

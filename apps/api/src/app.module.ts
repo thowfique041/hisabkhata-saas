@@ -27,6 +27,7 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { DemoModule } from './modules/demo/demo.module';
 import { MiscController } from './modules/misc/misc.controller';
 
 @Global()
@@ -39,14 +40,33 @@ class AppConfigModule {}
     AppConfigModule,
     LoggerModule.forRoot({
       pinoHttp: {
-        level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'test' ? 'silent' : process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+        level:
+          process.env.LOG_LEVEL ??
+          (process.env.NODE_ENV === 'test'
+            ? 'silent'
+            : process.env.NODE_ENV === 'production'
+              ? 'info'
+              : 'debug'),
         genReqId: (req, res) => {
           const id = (req.headers['x-request-id'] as string) || randomUUID();
           res.setHeader('X-Request-Id', id);
           return id;
         },
-        redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]', '*.password', '*.passwordHash', '*.token'], censor: '[redacted]' },
-        transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty', options: { singleLine: true } } : undefined,
+        redact: {
+          paths: [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'res.headers["set-cookie"]',
+            '*.password',
+            '*.passwordHash',
+            '*.token',
+          ],
+          censor: '[redacted]',
+        },
+        transport:
+          process.env.NODE_ENV === 'development'
+            ? { target: 'pino-pretty', options: { singleLine: true } }
+            : undefined,
         customProps: (req: any) => ({ userId: req.user?.id, tenantId: req.tenantCtx?.tenantId }),
         autoLogging: { ignore: (req) => req.url === '/api/health' },
       },
@@ -73,6 +93,7 @@ class AppConfigModule {}
     ExpensesModule,
     ReportsModule,
     AdminModule,
+    DemoModule,
   ],
   controllers: [MiscController],
   providers: [

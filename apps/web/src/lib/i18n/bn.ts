@@ -502,6 +502,7 @@ export const bn: Dictionary = {
     min: (n: number) => `কমপক্ষে ${toBnDigits(n)} অক্ষর লিখুন`,
     max: (n: number) => `${toBnDigits(n)} অক্ষরের বেশি লেখা যাবে না`,
     mismatch: 'দুটি পাসওয়ার্ড মেলেনি',
+    sameAsRow: (field: string, row: number) => `${toBnDigits(row)} নম্বর লাইনের সাথে একই ${field}`,
     known: {
       'At least 8 characters': 'কমপক্ষে ৮ অক্ষর লিখুন',
       'Use letters and numbers': 'অক্ষর আর সংখ্যা দুটোই দিন',

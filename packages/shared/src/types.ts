@@ -35,8 +35,22 @@ export interface SessionUser {
 
 export interface SessionPayload {
   user: SessionUser;
-  activeTenant: (SessionTenant & { currency: string; timezone: string; logoUrl: string | null }) | null;
+  activeTenant:
+    | (SessionTenant & {
+        currency: string;
+        timezone: string;
+        logoUrl: string | null;
+        /** Built-in role key (OWNER, MANAGER, CASHIER, STAFF) or null for custom roles. */ roleKey?:
+          string | null;
+      })
+    | null;
   tenants: SessionTenant[];
   permissions: Permission[];
-  plan: { code: string; name: string; status: string; endsAt: string | null; features: string[] } | null;
+  plan: {
+    code: string;
+    name: string;
+    status: string;
+    endsAt: string | null;
+    features: string[];
+  } | null;
 }

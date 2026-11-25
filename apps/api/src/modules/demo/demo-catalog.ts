@@ -1,0 +1,340 @@
+/**
+ * Sample shop used by "Load demo data". Every name here is invented for the demo (no real
+ * customers or suppliers); product brands are ordinary grocery items sold across Bangladesh.
+ */
+export interface DemoProduct {
+  name: string;
+  category: string;
+  unit: string;
+  cost: number;
+  price: number;
+  minStock: number;
+  /** Rough units sold per day, drives the generated sales. */
+  pace: number;
+}
+
+export const DEMO_CATEGORIES = [
+  'Rice & Grains',
+  'Oil & Spices',
+  'Dairy & Snacks',
+  'Beverages',
+  'Household',
+];
+
+export const DEMO_PRODUCTS: DemoProduct[] = [
+  {
+    name: 'Miniket Rice 25 kg (মিনিকেট চাল)',
+    category: 'Rice & Grains',
+    unit: 'bag',
+    cost: 1720,
+    price: 1850,
+    minStock: 5,
+    pace: 1.2,
+  },
+  {
+    name: 'Najirshail Rice 1 kg (নাজিরশাইল চাল)',
+    category: 'Rice & Grains',
+    unit: 'kg',
+    cost: 74,
+    price: 82,
+    minStock: 20,
+    pace: 6,
+  },
+  {
+    name: 'Chinigura Rice 1 kg (চিনিগুড়া চাল)',
+    category: 'Rice & Grains',
+    unit: 'kg',
+    cost: 128,
+    price: 140,
+    minStock: 10,
+    pace: 3,
+  },
+  {
+    name: 'Red Lentils 1 kg (মসুর ডাল)',
+    category: 'Rice & Grains',
+    unit: 'kg',
+    cost: 112,
+    price: 125,
+    minStock: 15,
+    pace: 4,
+  },
+  {
+    name: 'Atta 2 kg (আটা)',
+    category: 'Rice & Grains',
+    unit: 'pack',
+    cost: 122,
+    price: 135,
+    minStock: 12,
+    pace: 3,
+  },
+  {
+    name: 'Chickpeas 500 g (ছোলা)',
+    category: 'Rice & Grains',
+    unit: 'pack',
+    cost: 58,
+    price: 65,
+    minStock: 10,
+    pace: 2,
+  },
+  {
+    name: 'Soybean Oil 5 L (সয়াবিন তেল)',
+    category: 'Oil & Spices',
+    unit: 'bottle',
+    cost: 820,
+    price: 880,
+    minStock: 6,
+    pace: 1.5,
+  },
+  {
+    name: 'Soybean Oil 1 L (সয়াবিন তেল)',
+    category: 'Oil & Spices',
+    unit: 'bottle',
+    cost: 172,
+    price: 185,
+    minStock: 12,
+    pace: 4,
+  },
+  {
+    name: 'Mustard Oil 1 L (সরিষার তেল)',
+    category: 'Oil & Spices',
+    unit: 'bottle',
+    cost: 265,
+    price: 290,
+    minStock: 8,
+    pace: 1.5,
+  },
+  {
+    name: 'Iodised Salt 1 kg (লবণ)',
+    category: 'Oil & Spices',
+    unit: 'pack',
+    cost: 36,
+    price: 42,
+    minStock: 20,
+    pace: 4,
+  },
+  {
+    name: 'Sugar 1 kg (চিনি)',
+    category: 'Oil & Spices',
+    unit: 'kg',
+    cost: 128,
+    price: 140,
+    minStock: 15,
+    pace: 5,
+  },
+  {
+    name: 'Turmeric Powder 200 g (হলুদের গুঁড়া)',
+    category: 'Oil & Spices',
+    unit: 'pack',
+    cost: 82,
+    price: 95,
+    minStock: 8,
+    pace: 1.5,
+  },
+  {
+    name: 'Chilli Powder 200 g (মরিচের গুঁড়া)',
+    category: 'Oil & Spices',
+    unit: 'pack',
+    cost: 88,
+    price: 100,
+    minStock: 8,
+    pace: 1.5,
+  },
+  {
+    name: 'Onion 1 kg (পেঁয়াজ)',
+    category: 'Oil & Spices',
+    unit: 'kg',
+    cost: 88,
+    price: 100,
+    minStock: 20,
+    pace: 6,
+  },
+  {
+    name: 'Full Cream Milk Powder 500 g (গুঁড়া দুধ)',
+    category: 'Dairy & Snacks',
+    unit: 'pack',
+    cost: 450,
+    price: 495,
+    minStock: 6,
+    pace: 1.2,
+  },
+  {
+    name: 'UHT Milk 1 L (তরল দুধ)',
+    category: 'Dairy & Snacks',
+    unit: 'pack',
+    cost: 98,
+    price: 110,
+    minStock: 12,
+    pace: 3,
+  },
+  {
+    name: 'Eggs, 12 pcs (ডিম)',
+    category: 'Dairy & Snacks',
+    unit: 'dozen',
+    cost: 138,
+    price: 150,
+    minStock: 10,
+    pace: 4,
+  },
+  {
+    name: 'Chanachur 300 g (চানাচুর)',
+    category: 'Dairy & Snacks',
+    unit: 'pack',
+    cost: 68,
+    price: 80,
+    minStock: 15,
+    pace: 4,
+  },
+  {
+    name: 'Energy Biscuit (বিস্কুট)',
+    category: 'Dairy & Snacks',
+    unit: 'pack',
+    cost: 18,
+    price: 22,
+    minStock: 30,
+    pace: 8,
+  },
+  {
+    name: 'Muri 500 g (মুড়ি)',
+    category: 'Dairy & Snacks',
+    unit: 'pack',
+    cost: 48,
+    price: 55,
+    minStock: 15,
+    pace: 3,
+  },
+  {
+    name: 'Tea 400 g (চা পাতা)',
+    category: 'Beverages',
+    unit: 'pack',
+    cost: 215,
+    price: 240,
+    minStock: 8,
+    pace: 2,
+  },
+  {
+    name: 'Instant Coffee 50 g (কফি)',
+    category: 'Beverages',
+    unit: 'jar',
+    cost: 255,
+    price: 285,
+    minStock: 4,
+    pace: 0.6,
+  },
+  {
+    name: 'Mineral Water 1.5 L (পানি)',
+    category: 'Beverages',
+    unit: 'bottle',
+    cost: 24,
+    price: 30,
+    minStock: 24,
+    pace: 8,
+  },
+  {
+    name: 'Soft Drink 250 ml (কোমল পানীয়)',
+    category: 'Beverages',
+    unit: 'bottle',
+    cost: 20,
+    price: 25,
+    minStock: 24,
+    pace: 7,
+  },
+  {
+    name: 'Mango Juice 250 ml (আমের জুস)',
+    category: 'Beverages',
+    unit: 'pack',
+    cost: 25,
+    price: 30,
+    minStock: 24,
+    pace: 5,
+  },
+  {
+    name: 'Bath Soap 100 g (সাবান)',
+    category: 'Household',
+    unit: 'pcs',
+    cost: 54,
+    price: 62,
+    minStock: 15,
+    pace: 3,
+  },
+  {
+    name: 'Washing Powder 1 kg (ডিটারজেন্ট)',
+    category: 'Household',
+    unit: 'pack',
+    cost: 128,
+    price: 145,
+    minStock: 8,
+    pace: 1.5,
+  },
+  {
+    name: 'Dishwashing Bar (ডিশ ওয়াশ বার)',
+    category: 'Household',
+    unit: 'pcs',
+    cost: 23,
+    price: 28,
+    minStock: 20,
+    pace: 4,
+  },
+  {
+    name: 'Toilet Cleaner 500 ml (টয়লেট ক্লিনার)',
+    category: 'Household',
+    unit: 'bottle',
+    cost: 140,
+    price: 160,
+    minStock: 6,
+    pace: 1,
+  },
+  {
+    name: 'Mosquito Coil, 10 pcs (মশার কয়েল)',
+    category: 'Household',
+    unit: 'box',
+    cost: 62,
+    price: 75,
+    minStock: 10,
+    pace: 2,
+  },
+];
+
+export const DEMO_SUPPLIERS = [
+  { name: 'Sylhet Wholesale Traders (demo)', phone: '01700000001', categories: ['Rice & Grains'] },
+  { name: 'Bandarbazar Grocery Supply (demo)', phone: '01700000002', categories: ['Oil & Spices'] },
+  {
+    name: 'Green Valley Distribution (demo)',
+    phone: '01700000003',
+    categories: ['Dairy & Snacks', 'Beverages'],
+  },
+  { name: 'Surma Household Agency (demo)', phone: '01700000004', categories: ['Household'] },
+];
+
+export const DEMO_CUSTOMERS = [
+  { name: 'Demo Customer: Rahima Khatun', phone: '01800000001' },
+  { name: 'Demo Customer: Abdul Karim', phone: '01800000002' },
+  { name: 'Demo Customer: Nasrin Akter', phone: '01800000003' },
+  { name: 'Demo Customer: Jamal Uddin', phone: '01800000004' },
+  { name: 'Demo Customer: Shapla Begum', phone: '01800000005' },
+  { name: 'Demo Customer: Monir Hossain', phone: '01800000006' },
+  { name: 'Demo Customer: Tania Sultana', phone: '01800000007' },
+  { name: 'Demo Customer: Faruk Mia', phone: '01800000008' },
+];
+
+export const DEMO_EXPENSES: {
+  category: string;
+  amount: number;
+  everyDays: number;
+  description: string;
+}[] = [
+  { category: 'Shop rent', amount: 15000, everyDays: 30, description: 'Monthly shop rent (demo)' },
+  { category: 'Electricity', amount: 2600, everyDays: 30, description: 'Electricity bill (demo)' },
+  { category: 'Salaries', amount: 18000, everyDays: 30, description: 'Staff salary (demo)' },
+  {
+    category: 'Transport',
+    amount: 450,
+    everyDays: 7,
+    description: 'Van fare for deliveries (demo)',
+  },
+  {
+    category: 'Miscellaneous',
+    amount: 220,
+    everyDays: 4,
+    description: 'Tea and small items (demo)',
+  },
+];
