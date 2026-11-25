@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import plugin from 'tailwindcss/plugin';
 
 export default {
   darkMode: 'class',
@@ -25,7 +26,13 @@ export default {
         positive: 'hsl(var(--positive))',
         negative: 'hsl(var(--negative))',
         warning: 'hsl(var(--warning))',
-        navy: { DEFAULT: '#0F1E3D', 900: '#0B1526', 800: '#111D33', 700: '#1A2B4D', 600: '#2A3D63' },
+        navy: {
+          DEFAULT: '#0F1E3D',
+          900: '#0B1526',
+          800: '#111D33',
+          700: '#1A2B4D',
+          600: '#2A3D63',
+        },
         emerald: { DEFAULT: '#059669' },
         sky: { soft: '#7FA7E6' },
       },
@@ -37,5 +44,10 @@ export default {
       animation: { 'slide-in': 'slide-in 180ms ease-out', 'fade-in': 'fade-in 120ms ease-out' },
     },
   },
-  plugins: [],
+  plugins: [
+    // `coarse:` targets touch screens (tablets at the counter): bigger tap targets there only.
+    plugin(({ addVariant }) => {
+      addVariant('coarse', '@media (pointer: coarse)');
+    }),
+  ],
 } satisfies Config;

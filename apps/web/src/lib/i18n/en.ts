@@ -3,8 +3,11 @@
  * `bn.ts` must provide every key (it is typed against this file).
  * House style: plain verbs, sentence case, no em dashes.
  */
+import { panelEn } from './panel-en';
+
 export const en = {
   langName: 'English',
+  panel: panelEn,
   meta: {
     homeTitle: 'HisabKhata: inventory, POS and invoicing for Bangladeshi shops',
     homeDescription:
@@ -507,7 +510,7 @@ export const en = {
   },
 };
 
-type Widen<T> = T extends string
+export type Widen<T> = T extends string
   ? string
   : T extends (...args: infer A) => infer R
     ? (...args: A) => Widen<R>
