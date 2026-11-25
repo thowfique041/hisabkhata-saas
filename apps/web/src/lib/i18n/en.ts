@@ -55,7 +55,6 @@ export const en = {
   },
   common: {
     step: 'Step',
-    left: 'left',
     perMonth: 'month',
     perYear: 'year',
     tryAgain: 'Try again',
@@ -84,6 +83,14 @@ export const en = {
       dues: 'Added to Farzana Begum’s dues',
       stockAfter: 'Stock after this sale',
       rice: 'Miniket Rice 25 kg',
+      items: [
+        'Miniket Rice 25 kg',
+        'Rupchanda Soybean Oil 5 L',
+        'চানাচুর (300 g)',
+        'Ispahani Tea 400 g',
+      ],
+      left: (n: number) => `${n} left`,
+      browserUrl: 'hisabkhata.app/dashboard',
     },
     stepsTitle: 'One sale, recorded once',
     stepsBody: 'No more writing the same sale in a notebook, a stock register and a dues book.',

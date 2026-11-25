@@ -56,7 +56,6 @@ export const bn: Dictionary = {
   },
   common: {
     step: 'ধাপ',
-    left: 'টি বাকি',
     perMonth: 'মাস',
     perYear: 'বছর',
     tryAgain: 'আবার চেষ্টা করুন',
@@ -84,6 +83,14 @@ export const bn: Dictionary = {
       dues: 'ফারজানা বেগমের বাকিতে যোগ হলো',
       stockAfter: 'এই বিক্রির পর স্টক',
       rice: 'মিনিকেট চাল ২৫ কেজি',
+      items: [
+        'মিনিকেট চাল ২৫ কেজি',
+        'রূপচাঁদা সয়াবিন তেল ৫ লি.',
+        'চানাচুর (৩০০ গ্রা.)',
+        'ইস্পাহানি চা ৪০০ গ্রা.',
+      ],
+      left: (n: number) => `${toBnDigits(n)}টি আছে`,
+      browserUrl: 'hisabkhata.app/dashboard',
     },
     stepsTitle: 'একবার বিক্রি, একবারই লেখা',
     stepsBody: 'একই বিক্রি আর খাতা, স্টক রেজিস্টার আর বাকির খাতায় তিনবার লিখতে হবে না।',

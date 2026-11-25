@@ -44,11 +44,11 @@ export function MarketingNav() {
 
   return (
     <header className="sticky top-0 z-30 border-b bg-surface/90 backdrop-blur supports-[backdrop-filter]:bg-surface/75">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-6 lg:gap-8">
         <Link href="/" aria-label={t.nav.home} className="rounded-sm">
           <Logo />
         </Link>
-        <nav className="hidden gap-6 text-sm md:flex" aria-label="Main">
+        <nav className="hidden gap-5 whitespace-nowrap text-sm md:flex lg:gap-6" aria-label="Main">
           {LINKS.map((href) => (
             <Link
               key={href}
@@ -63,9 +63,9 @@ export function MarketingNav() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto hidden items-center gap-3 md:flex">
+        <div className="ml-auto hidden items-center gap-3 whitespace-nowrap md:flex">
           <LanguageSwitcher />
-          <ThemeToggle />
+          <ThemeToggle className="hidden lg:inline-flex" />
           {signedIn ? (
             <Button asChild>
               <Link href="/dashboard">{t.nav.openDashboard}</Link>
