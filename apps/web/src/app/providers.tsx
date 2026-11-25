@@ -5,9 +5,11 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { ApiError } from '@/lib/api';
 import { wakeApi } from '@/lib/wake';
+import { I18nProvider } from '@/lib/i18n/client';
+import type { Locale } from '@/lib/i18n';
 import { ConfirmProvider } from '@/components/confirm';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children, locale }: { children: React.ReactNode; locale: Locale }) {
   const [client] = React.useState(
     () =>
       new QueryClient({
@@ -25,7 +27,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={client}>
-        <ConfirmProvider>{children}</ConfirmProvider>
+        <I18nProvider locale={locale}>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </I18nProvider>
         <Toaster
           position="bottom-right"
           richColors

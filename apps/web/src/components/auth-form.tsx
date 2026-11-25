@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/client';
 
 export function AuthCard({
   title,
@@ -42,6 +43,7 @@ export function FormError({ message, className }: { message?: string | null; cla
 
 /** Shown only while a submit is waiting for a sleeping API to wake up. */
 export function ConnectingNotice({ show, className }: { show: boolean; className?: string }) {
+  const { t } = useI18n();
   if (!show) return null;
   return (
     <p
@@ -52,7 +54,7 @@ export function ConnectingNotice({ show, className }: { show: boolean; className
       )}
     >
       <span className="size-2 shrink-0 animate-pulse rounded-full bg-emerald" aria-hidden />
-      Connecting to server… this can take up to a minute after a quiet spell.
+      {t.common.connecting}
     </p>
   );
 }

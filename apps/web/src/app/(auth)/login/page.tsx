@@ -12,16 +12,16 @@ import { Input, PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { AuthCard, ConnectingNotice, FormError } from '@/components/auth-form';
 import { whenApiReady } from '@/lib/wake';
+import { useI18n } from '@/lib/i18n/client';
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
+  const { t, tr } = useI18n();
   const [connecting, setConnecting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(() =>
-    params.get('offline')
-      ? 'We could not reach the server. It may still be starting up, so please try again in a minute.'
-      : null,
+    params.get('offline') ? t.common.offline : null,
   );
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -36,22 +36,22 @@ function LoginForm() {
       const next = params.get('next');
       router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard');
     } catch (err) {
-      setError(errorMessage(err));
+      setError(tr(errorMessage(err)) ?? null);
     }
   });
 
   return (
     <AuthCard
-      title="Sign in"
-      description="Welcome back. Sign in to open your khata."
+      title={t.auth.login.title}
+      description={t.auth.login.description}
       footer={
         <>
-          New to HisabKhata?{' '}
+          {t.auth.login.newHere}{' '}
           <Link
             href="/register"
             className="font-medium text-foreground underline underline-offset-4"
           >
-            Create a free account
+            {t.auth.login.create}
           </Link>
         </>
       }
@@ -59,7 +59,11 @@ function LoginForm() {
       <form onSubmit={onSubmit} method="post" className="space-y-4" noValidate>
         <FormError message={error} />
         <ConnectingNotice show={connecting} />
-        <Field label="Email" htmlFor="email" error={form.formState.errors.email?.message}>
+        <Field
+          label={t.auth.login.email}
+          htmlFor="email"
+          error={tr(form.formState.errors.email?.message)}
+        >
           <Input
             id="email"
             type="email"
@@ -69,7 +73,11 @@ function LoginForm() {
             aria-invalid={!!form.formState.errors.email}
           />
         </Field>
-        <Field label="Password" htmlFor="password" error={form.formState.errors.password?.message}>
+        <Field
+          label={t.auth.login.password}
+          htmlFor="password"
+          error={tr(form.formState.errors.password?.message)}
+        >
           <PasswordInput
             id="password"
             autoComplete="current-password"
@@ -82,11 +90,11 @@ function LoginForm() {
             href="/forgot-password"
             className="text-sm text-muted-foreground hover:text-foreground"
           >
-            Forgot your password?
+            {t.auth.login.forgot}
           </Link>
         </div>
         <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
-          Sign in
+          {t.auth.login.submit}
         </Button>
       </form>
     </AuthCard>

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n/client';
 
 export const inputClass =
   'flex h-9 w-full rounded-md border border-input bg-surface px-3 py-1 text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-negative';
@@ -19,6 +20,8 @@ type PasswordInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'typ
 export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
   ({ className, ...props }, ref) => {
     const [visible, setVisible] = React.useState(false);
+    const { t } = useI18n();
+    const label = visible ? t.auth.hidePassword : t.auth.showPassword;
     return (
       <div className="relative">
         <input
@@ -30,9 +33,9 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? 'Hide password' : 'Show password'}
+          aria-label={label}
           aria-pressed={visible}
-          title={visible ? 'Hide password' : 'Show password'}
+          title={label}
           className="absolute inset-y-0 right-0 flex w-9 items-center justify-center rounded-r-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {visible ? (

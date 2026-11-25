@@ -14,6 +14,7 @@ import { Input, PasswordInput, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { AuthCard, ConnectingNotice, FormError } from '@/components/auth-form';
 import { whenApiReady } from '@/lib/wake';
+import { useI18n } from '@/lib/i18n/client';
 
 const formSchema = registerSchema
   .extend({ confirmPassword: z.string() })
@@ -28,6 +29,8 @@ function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
+  const { t, tr } = useI18n();
+  const r = t.auth.register;
   const [connecting, setConnecting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const form = useForm<Values>({
@@ -54,23 +57,19 @@ function RegisterForm() {
       qc.clear();
       router.replace('/dashboard?welcome=1');
     } catch (err) {
-      setError(errorMessage(err));
+      setError(tr(errorMessage(err)) ?? null);
     }
   });
 
   return (
     <AuthCard
-      title="Create your account"
-      description={
-        params.get('plan')
-          ? 'Start with a 14-day Basic trial. No card needed.'
-          : 'Set up your business in under a minute. Every new account starts with a 14-day Basic trial.'
-      }
+      title={r.title}
+      description={params.get('plan') ? r.descriptionPlan : r.description}
       footer={
         <>
-          Already have an account?{' '}
+          {r.haveAccount}{' '}
           <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
-            Sign in
+            {r.signIn}
           </Link>
         </>
       }
@@ -78,10 +77,10 @@ function RegisterForm() {
       <form onSubmit={onSubmit} method="post" className="space-y-4" noValidate>
         <FormError message={error} />
         <ConnectingNotice show={connecting} />
-        <Field label="Your name" htmlFor="name" error={e.name?.message}>
+        <Field label={r.name} htmlFor="name" error={tr(e.name?.message)}>
           <Input id="name" autoComplete="name" {...form.register('name')} aria-invalid={!!e.name} />
         </Field>
-        <Field label="Email" htmlFor="email" error={e.email?.message}>
+        <Field label={r.email} htmlFor="email" error={tr(e.email?.message)}>
           <Input
             id="email"
             type="email"
@@ -91,10 +90,10 @@ function RegisterForm() {
           />
         </Field>
         <Field
-          label="Password"
+          label={r.password}
           htmlFor="password"
-          error={e.password?.message}
-          hint="At least 8 characters with letters and numbers."
+          error={tr(e.password?.message)}
+          hint={r.passwordHint}
         >
           <PasswordInput
             id="password"
@@ -103,11 +102,7 @@ function RegisterForm() {
             aria-invalid={!!e.password}
           />
         </Field>
-        <Field
-          label="Confirm password"
-          htmlFor="confirmPassword"
-          error={e.confirmPassword?.message}
-        >
+        <Field label={r.confirm} htmlFor="confirmPassword" error={tr(e.confirmPassword?.message)}>
           <PasswordInput
             id="confirmPassword"
             autoComplete="new-password"
@@ -116,25 +111,25 @@ function RegisterForm() {
           />
         </Field>
         <div className="border-t pt-4" />
-        <Field label="Business name" htmlFor="businessName" error={e.businessName?.message}>
+        <Field label={r.business} htmlFor="businessName" error={tr(e.businessName?.message)}>
           <Input
             id="businessName"
-            placeholder="e.g. Rahman General Store"
+            placeholder={r.businessPlaceholder}
             {...form.register('businessName')}
             aria-invalid={!!e.businessName}
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Business type" htmlFor="businessType">
+          <Field label={r.businessType} htmlFor="businessType">
             <Select id="businessType" {...form.register('businessType')}>
-              {BUSINESS_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {titleCase(t)}
+              {BUSINESS_TYPES.map((b) => (
+                <option key={b} value={b}>
+                  {t.auth.businessTypes[b] ?? titleCase(b)}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Mobile (optional)" htmlFor="phone" error={e.phone?.message}>
+          <Field label={r.mobile} htmlFor="phone" error={tr(e.phone?.message)}>
             <Input
               id="phone"
               type="tel"
@@ -145,7 +140,7 @@ function RegisterForm() {
           </Field>
         </div>
         <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>
-          Create account
+          {r.submit}
         </Button>
       </form>
     </AuthCard>

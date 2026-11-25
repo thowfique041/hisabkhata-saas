@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
+import { getI18n } from '@/lib/i18n/server';
 import { PricingPlans } from './plans';
 
-export const metadata: Metadata = {
-  title: 'Pricing',
-  description:
-    'Simple prices in taka. Start free, try Basic for 14 days, pay by bKash, Nagad, card or bank transfer.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t.meta.pricingTitle, description: t.meta.pricingDescription };
+}
 
 export default function PricingPage() {
   return <PricingPlans />;
