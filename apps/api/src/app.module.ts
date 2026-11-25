@@ -52,6 +52,16 @@ class AppConfigModule {}
           res.setHeader('X-Request-Id', id);
           return id;
         },
+        // Keep request logs short: method, path and id. Full headers drown out errors and carry
+        // platform tokens (x-vercel-oidc-token, proxy signatures) that do not belong in logs.
+        serializers: {
+          req: (req: { id: string; method: string; url: string }) => ({
+            id: req.id,
+            method: req.method,
+            url: req.url,
+          }),
+          res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+        },
         redact: {
           paths: [
             'req.headers.authorization',
