@@ -15,7 +15,7 @@
     --surface: 0 0% 100%;
     --foreground: 220 61% 15%; /* navy ink */
     --muted: 214 30% 95%;
-    --muted-foreground: 215 16% 42%;
+    --muted-foreground: 215 19% 35%; /* slate-600: 7:1 on white, AA+ */
     --border: 214 26% 91%; /* ledger rule #E3E8EF */
     --input: 214 22% 84%;
     --ring: 216 64% 70%; /* soft blue */
@@ -23,7 +23,7 @@
     --primary-foreground: 0 0% 100%;
     --accent: 216 68% 94%;
     --accent-foreground: 220 61% 20%;
-    --positive: 161 94% 30%; /* #059669 */
+    --positive: 161 94% 24%; /* darker than #059669 so green text passes AA (4.5:1+) */
     --negative: 0 72% 42%;
     --warning: 26 90% 37%;
   }
@@ -32,7 +32,7 @@
     --surface: 219 50% 13%; /* #111D33 */
     --foreground: 214 32% 91%;
     --muted: 219 40% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 20% 70%;
     --border: 219 32% 21%;
     --input: 219 28% 28%;
     --ring: 216 64% 60%;

@@ -113,7 +113,7 @@ export default async function HomePage() {
       </div>
 
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="flex flex-col items-start justify-between gap-6 rounded-lg bg-navy px-8 py-10 text-white md:flex-row md:items-center">
+        <div className="flex flex-col items-start justify-between gap-6 rounded-lg bg-navy px-8 py-10 text-white ring-1 ring-transparent dark:bg-navy-700 dark:ring-white/10 md:flex-row md:items-center">
           <div>
             <h2 className="text-2xl font-semibold">{h.ctaTitle}</h2>
             <p className="mt-2 text-slate-300">{h.ctaBody}</p>

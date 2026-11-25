@@ -13,11 +13,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/marketing/reveal';
 import { getI18n } from '@/lib/i18n/server';
+import { pageMetadata } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
-  return { title: t.meta.featuresTitle, description: t.meta.featuresDescription };
+  return pageMetadata(t.meta.featuresTitle, t.meta.featuresDescription, '/features');
 }
 
 const ICONS: Record<string, LucideIcon> = {

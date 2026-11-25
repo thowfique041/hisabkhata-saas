@@ -3,11 +3,12 @@ import { Clock, Mail, MessageCircle, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { site } from '@/config/site';
 import { getI18n } from '@/lib/i18n/server';
+import { pageMetadata } from '@/lib/seo';
 import { ContactForm } from './form';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
-  return { title: t.meta.contactTitle, description: t.meta.contactDescription };
+  return pageMetadata(t.meta.contactTitle, t.meta.contactDescription, '/contact');
 }
 
 export default async function ContactPage() {

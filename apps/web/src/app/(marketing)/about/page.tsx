@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import { BadgeCheck, MapPin, Scale, Store, UserRound, type LucideIcon } from 'lucide-react';
 import { Reveal } from '@/components/marketing/reveal';
 import { getI18n } from '@/lib/i18n/server';
+import { pageMetadata } from '@/lib/seo';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
-  return { title: t.meta.aboutTitle, description: t.meta.aboutDescription };
+  return pageMetadata(t.meta.aboutTitle, t.meta.aboutDescription, '/about');
 }
 
 const VALUE_ICONS: LucideIcon[] = [Store, BadgeCheck, Scale];
@@ -52,7 +53,7 @@ export default async function AboutPage() {
               <span className="text-muted-foreground">{a.founderRole}</span>
             </figcaption>
           </figure>
-          <div className="rounded-lg bg-navy p-5 text-white">
+          <div className="rounded-lg bg-navy p-5 text-white dark:bg-navy-700 dark:ring-1 dark:ring-white/10">
             <p className="flex items-center gap-2 font-semibold">
               <MapPin className="size-4 text-[#34D399]" aria-hidden />
               {a.madeTitle}

@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import { Faq } from '@/components/marketing/faq';
 import { Reveal } from '@/components/marketing/reveal';
 import { getI18n } from '@/lib/i18n/server';
+import { pageMetadata } from '@/lib/seo';
 import { PricingPlans } from './plans';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
-  return { title: t.meta.pricingTitle, description: t.meta.pricingDescription };
+  return pageMetadata(t.meta.pricingTitle, t.meta.pricingDescription, '/pricing');
 }
 
 export default async function PricingPage() {
