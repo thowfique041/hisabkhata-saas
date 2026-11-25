@@ -26,6 +26,7 @@ import { useConfirm } from '@/components/confirm';
 import { RequirePermission } from '@/components/shell/guards';
 import { ImportProductsDialog } from '@/components/onboarding/import-products';
 import { LoadDemoButton } from '@/components/onboarding/demo-data';
+import { useUrlIntent } from '@/hooks/use-url-intent';
 import { useI18n } from '@/lib/i18n/client';
 import { Upload } from 'lucide-react';
 import { formatDate, titleCase } from '@/lib/utils';
@@ -129,7 +130,9 @@ function Products() {
     mode: 'new' | 'view' | 'edit';
     id?: string;
     product?: any;
-  } | null>(params.get('new') ? { mode: 'new' } : null);
+  } | null>(null);
+  useUrlIntent('open', (id) => setPanel({ mode: 'view', id }));
+  useUrlIntent('new', () => setPanel({ mode: 'new' }), can(PERMISSIONS.PRODUCT_MANAGE));
   const bulk = useAction((b: any) => api('/products/bulk', { method: 'POST', body: b }), {
     success: (r: any) => `${r.updated} products updated`,
     invalidate: [['/products'], ['/categories']],

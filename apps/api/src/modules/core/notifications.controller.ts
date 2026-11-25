@@ -12,7 +12,7 @@ export class NotificationsController {
 
   @Get()
   list(@Tenant() t: TenantContext, @Query('unread') unread?: string) {
-    return this.notifications.list(t.tenantId, t.userId, unread === 'true');
+    return this.notifications.list(t.tenantId, t.userId, unread === 'true', t.permissions);
   }
 
   @Post('read-all')

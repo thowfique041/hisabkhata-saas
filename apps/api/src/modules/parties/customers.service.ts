@@ -6,7 +6,13 @@ import { pageArgs, paginated, orderBy } from '../../common/utils/pagination';
 import type { TenantContext } from '../../common/types';
 import type { PaymentMethod, Prisma } from '../../generated/prisma/client';
 
-type PartyInput = { name: string; phone?: string; email?: string; address?: string; notes?: string };
+type PartyInput = {
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+};
 
 @Injectable()
 export class CustomersService {
@@ -15,16 +21,46 @@ export class CustomersService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(tenantId: string, q: { page: number; pageSize: number; search?: string; sort?: string; order: 'asc' | 'desc' }) {
+  async list(
+    tenantId: string,
+    q: {
+      page: number;
+      pageSize: number;
+      search?: string;
+      sort?: string;
+      order: 'asc' | 'desc';
+      dues?: 'all' | 'owing' | 'overdue';
+    },
+  ) {
     const db = this.prisma.scoped(tenantId);
+    const owing: Prisma.SaleWhereInput = { dueAmount: { gt: 0 }, status: { not: 'CANCELLED' } };
     const where: Prisma.CustomerWhereInput = {
       archivedAt: null,
+      ...(q.dues === 'owing'
+        ? { sales: { some: owing } }
+        : q.dues === 'overdue'
+          ? {
+              sales: {
+                some: { ...owing, createdAt: { lt: new Date(Date.now() - 30 * 86_400_000) } },
+              },
+            }
+          : {}),
       ...(q.search
-        ? { OR: [{ name: { contains: q.search, mode: 'insensitive' } }, { phone: { contains: q.search } }, { email: { contains: q.search, mode: 'insensitive' } }] }
+        ? {
+            OR: [
+              { name: { contains: q.search, mode: 'insensitive' } },
+              { phone: { contains: q.search } },
+              { email: { contains: q.search, mode: 'insensitive' } },
+            ],
+          }
         : {}),
     };
     const [rows, total] = await Promise.all([
-      db.customer.findMany({ where, orderBy: orderBy(q.sort, q.sort ? q.order : 'asc', ['name', 'createdAt'] as const, 'name'), ...pageArgs(q) }),
+      db.customer.findMany({
+        where,
+        orderBy: orderBy(q.sort, q.sort ? q.order : 'asc', ['name', 'createdAt'] as const, 'name'),
+        ...pageArgs(q),
+      }),
       db.customer.count({ where }),
     ]);
     const stats = rows.length
@@ -75,17 +111,32 @@ export class CustomersService {
   }
 
   async create(ctx: TenantContext, input: PartyInput) {
-    const c = await this.prisma.scoped(ctx.tenantId).customer.create({ data: { tenantId: ctx.tenantId, ...input } });
-    await this.audit.log({ action: 'customer.created', tenantId: ctx.tenantId, userId: ctx.userId, entity: 'Customer', entityId: c.id });
+    const c = await this.prisma
+      .scoped(ctx.tenantId)
+      .customer.create({ data: { tenantId: ctx.tenantId, ...input } });
+    await this.audit.log({
+      action: 'customer.created',
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      entity: 'Customer',
+      entityId: c.id,
+    });
     return c;
   }
 
   async update(ctx: TenantContext, id: string, input: PartyInput) {
     const db = this.prisma.scoped(ctx.tenantId);
-    if (!(await db.customer.findFirst({ where: { id } }))) throw new NotFoundException('Customer not found');
+    if (!(await db.customer.findFirst({ where: { id } })))
+      throw new NotFoundException('Customer not found');
     return db.customer.update({
       where: { id },
-      data: { name: input.name, phone: input.phone ?? null, email: input.email ?? null, address: input.address ?? null, notes: input.notes ?? null },
+      data: {
+        name: input.name,
+        phone: input.phone ?? null,
+        email: input.email ?? null,
+        address: input.address ?? null,
+        notes: input.notes ?? null,
+      },
     });
   }
 
@@ -93,27 +144,49 @@ export class CustomersService {
     const db = this.prisma.scoped(ctx.tenantId);
     const c = await db.customer.findFirst({ where: { id } });
     if (!c) throw new NotFoundException('Customer not found');
-    const due = await db.sale.aggregate({ where: { customerId: id, status: { not: 'CANCELLED' } }, _sum: { dueAmount: true } });
-    if (dec(due._sum.dueAmount).greaterThan(0)) throw new BadRequestException('This customer still has an outstanding balance');
+    const due = await db.sale.aggregate({
+      where: { customerId: id, status: { not: 'CANCELLED' } },
+      _sum: { dueAmount: true },
+    });
+    if (dec(due._sum.dueAmount).greaterThan(0))
+      throw new BadRequestException('This customer still has an outstanding balance');
     await db.customer.update({ where: { id }, data: { archivedAt: new Date() } });
-    await this.audit.log({ action: 'customer.archived', tenantId: ctx.tenantId, userId: ctx.userId, entity: 'Customer', entityId: id });
+    await this.audit.log({
+      action: 'customer.archived',
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      entity: 'Customer',
+      entityId: id,
+    });
     return { ok: true };
   }
 
   /** Collects a payment against a customer's dues, oldest sale first. */
-  async receivePayment(ctx: TenantContext, id: string, input: { method: PaymentMethod; amount: string; reference?: string; note?: string }) {
+  async receivePayment(
+    ctx: TenantContext,
+    id: string,
+    input: { method: PaymentMethod; amount: string; reference?: string; note?: string },
+  ) {
     const amount = money(input.amount);
-    if (amount.lessThanOrEqualTo(0)) throw new BadRequestException('Amount must be greater than zero');
+    if (amount.lessThanOrEqualTo(0))
+      throw new BadRequestException('Amount must be greater than zero');
     const result = await this.prisma.$transaction(async (tx) => {
       const customer = await tx.customer.findFirst({ where: { id, tenantId: ctx.tenantId } });
       if (!customer) throw new NotFoundException('Customer not found');
       const dueSales = await tx.sale.findMany({
-        where: { tenantId: ctx.tenantId, customerId: id, status: { not: 'CANCELLED' }, dueAmount: { gt: 0 } },
+        where: {
+          tenantId: ctx.tenantId,
+          customerId: id,
+          status: { not: 'CANCELLED' },
+          dueAmount: { gt: 0 },
+        },
         orderBy: { createdAt: 'asc' },
       });
       const outstanding = dueSales.reduce((a, s) => a.plus(s.dueAmount), ZERO);
       if (amount.greaterThan(outstanding)) {
-        throw new BadRequestException(`Amount exceeds the outstanding balance of ${outstanding.toFixed(2)}`);
+        throw new BadRequestException(
+          `Amount exceeds the outstanding balance of ${outstanding.toFixed(2)}`,
+        );
       }
       let remaining = amount;
       const applied: { saleId: string; invoiceNo: string; amount: string }[] = [];
@@ -125,9 +198,14 @@ export class CustomersService {
         // Optimistic guard: only apply if the sale's due has not changed concurrently.
         const upd = await tx.sale.updateMany({
           where: { id: s.id, tenantId: ctx.tenantId, dueAmount: s.dueAmount },
-          data: { paidAmount: paid, dueAmount: due, paymentStatus: paymentStatusFor(dec(s.total).minus(s.refundedAmount), paid) },
+          data: {
+            paidAmount: paid,
+            dueAmount: due,
+            paymentStatus: paymentStatusFor(dec(s.total).minus(s.refundedAmount), paid),
+          },
         });
-        if (upd.count !== 1) throw new BadRequestException('Balance changed while saving. Please retry.');
+        if (upd.count !== 1)
+          throw new BadRequestException('Balance changed while saving. Please retry.');
         await tx.payment.create({
           data: {
             tenantId: ctx.tenantId,
@@ -147,7 +225,14 @@ export class CustomersService {
       }
       return { applied, outstandingAfter: outstanding.minus(amount).toFixed(2) };
     });
-    await this.audit.log({ action: 'customer.payment_received', tenantId: ctx.tenantId, userId: ctx.userId, entity: 'Customer', entityId: id, metadata: { amount: amount.toFixed(2) } });
+    await this.audit.log({
+      action: 'customer.payment_received',
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      entity: 'Customer',
+      entityId: id,
+      metadata: { amount: amount.toFixed(2) },
+    });
     return result;
   }
 
@@ -158,28 +243,71 @@ export class CustomersService {
     if (!customer) throw new NotFoundException('Customer not found');
     const range = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
     const [sales, payments, opening] = await Promise.all([
-      db.sale.findMany({ where: { customerId: id, createdAt: range }, orderBy: { createdAt: 'asc' } }),
-      db.payment.findMany({ where: { customerId: id, createdAt: range }, orderBy: { createdAt: 'asc' } }),
+      db.sale.findMany({
+        where: { customerId: id, createdAt: range },
+        orderBy: { createdAt: 'asc' },
+      }),
+      db.payment.findMany({
+        where: { customerId: id, createdAt: range },
+        orderBy: { createdAt: 'asc' },
+      }),
       from ? this.balanceBefore(tenantId, id, from) : Promise.resolve(ZERO),
     ]);
-    type Entry = { date: Date; type: string; reference: string; debit: string; credit: string; balance?: string };
+    type Entry = {
+      date: Date;
+      type: string;
+      reference: string;
+      debit: string;
+      credit: string;
+      balance?: string;
+    };
     const entries: Entry[] = [];
     for (const s of sales) {
-      entries.push({ date: s.createdAt, type: 'Invoice', reference: s.invoiceNo, debit: s.total.toFixed(2), credit: '0.00' });
+      entries.push({
+        date: s.createdAt,
+        type: 'Invoice',
+        reference: s.invoiceNo,
+        debit: s.total.toFixed(2),
+        credit: '0.00',
+      });
       if (s.status === 'CANCELLED' && s.cancelledAt) {
-        entries.push({ date: s.cancelledAt, type: 'Cancelled', reference: s.invoiceNo, debit: '0.00', credit: s.total.toFixed(2) });
+        entries.push({
+          date: s.cancelledAt,
+          type: 'Cancelled',
+          reference: s.invoiceNo,
+          debit: '0.00',
+          credit: s.total.toFixed(2),
+        });
       }
     }
     for (const p of payments) {
       if (p.direction === 'IN') {
-        entries.push({ date: p.createdAt, type: 'Payment', reference: p.reference ?? p.method, debit: '0.00', credit: p.amount.toFixed(2) });
+        entries.push({
+          date: p.createdAt,
+          type: 'Payment',
+          reference: p.reference ?? p.method,
+          debit: '0.00',
+          credit: p.amount.toFixed(2),
+        });
       } else {
-        entries.push({ date: p.createdAt, type: 'Refund paid', reference: p.reference ?? p.method, debit: p.amount.toFixed(2), credit: '0.00' });
+        entries.push({
+          date: p.createdAt,
+          type: 'Refund paid',
+          reference: p.reference ?? p.method,
+          debit: p.amount.toFixed(2),
+          credit: '0.00',
+        });
       }
     }
     // Refund credits (goods returned) reduce what the customer owes.
     for (const s of sales.filter((x) => dec(x.refundedAmount).greaterThan(0))) {
-      entries.push({ date: s.updatedAt, type: 'Return', reference: s.invoiceNo, debit: '0.00', credit: s.refundedAmount.toFixed(2) });
+      entries.push({
+        date: s.updatedAt,
+        type: 'Return',
+        reference: s.invoiceNo,
+        debit: '0.00',
+        credit: s.refundedAmount.toFixed(2),
+      });
     }
     entries.sort((a, b) => a.date.getTime() - b.date.getTime());
     let bal = opening;
@@ -193,10 +321,22 @@ export class CustomersService {
   private async balanceBefore(tenantId: string, customerId: string, before: Date) {
     const db = this.prisma.scoped(tenantId);
     const [s, cancelled, pin, pout] = await Promise.all([
-      db.sale.aggregate({ where: { customerId, createdAt: { lt: before } }, _sum: { total: true, refundedAmount: true } }),
-      db.sale.aggregate({ where: { customerId, status: 'CANCELLED', cancelledAt: { lt: before } }, _sum: { total: true } }),
-      db.payment.aggregate({ where: { customerId, direction: 'IN', createdAt: { lt: before } }, _sum: { amount: true } }),
-      db.payment.aggregate({ where: { customerId, direction: 'OUT', createdAt: { lt: before } }, _sum: { amount: true } }),
+      db.sale.aggregate({
+        where: { customerId, createdAt: { lt: before } },
+        _sum: { total: true, refundedAmount: true },
+      }),
+      db.sale.aggregate({
+        where: { customerId, status: 'CANCELLED', cancelledAt: { lt: before } },
+        _sum: { total: true },
+      }),
+      db.payment.aggregate({
+        where: { customerId, direction: 'IN', createdAt: { lt: before } },
+        _sum: { amount: true },
+      }),
+      db.payment.aggregate({
+        where: { customerId, direction: 'OUT', createdAt: { lt: before } },
+        _sum: { amount: true },
+      }),
     ]);
     return dec(s._sum.total)
       .minus(dec(s._sum.refundedAmount))

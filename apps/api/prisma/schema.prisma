@@ -176,6 +176,7 @@ model Tenant {
   defaultTaxRate     Decimal      @default(0) @db.Decimal(5, 2)
   allowNegativeStock Boolean      @default(false)
   lowStockEmail      Boolean      @default(true)
+  alertsCheckedAt    DateTime?
   status             TenantStatus @default(ACTIVE)
   suspendedReason    String?
   createdAt          DateTime     @default(now())
@@ -737,12 +738,17 @@ model Notification {
   title     String
   body      String
   link      String?
+  /// Structured values (counts, names, days) so the app can show the alert in the reader's language.
+  data      Json?
   readAt    DateTime?
+  /// Live alerts (low stock, dues, trial) are upserted by this key so each fires once per period.
+  dedupeKey String?
   createdAt DateTime  @default(now())
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, dedupeKey])
   @@index([tenantId, readAt, createdAt])
   @@index([userId, readAt])
 }

@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../core/audit.service';
+import { AlertsService } from '../core/alerts.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import {
   DEMO_CATEGORIES,
@@ -57,6 +58,7 @@ export class DemoService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly alerts: AlertsService,
   ) {}
 
   async status(tenantId: string): Promise<DemoStatus> {
@@ -451,6 +453,7 @@ export class DemoService {
       entity: 'Tenant',
       entityId: tenantId,
     });
+    await this.alerts.invalidate(tenantId);
     return {
       ...(await this.status(tenantId)),
       purchases: purchases.length,
@@ -550,6 +553,7 @@ export class DemoService {
       entity: 'Tenant',
       entityId: tenantId,
     });
+    await this.alerts.invalidate(tenantId, true);
     return result;
   }
 }

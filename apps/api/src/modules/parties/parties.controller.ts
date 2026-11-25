@@ -5,7 +5,7 @@ import { z } from 'zod';
 import {
   customerSchema,
   dateRangeSchema,
-  listQuerySchema,
+  partyListQuerySchema,
   PERMISSIONS,
   receivePaymentSchema,
   supplierSchema,
@@ -28,7 +28,7 @@ export class PartiesController {
 
   @Get('customers')
   @RequirePermissions(PERMISSIONS.CUSTOMER_VIEW)
-  listCustomers(@Tenant() t: TenantContext, @ZQuery(listQuerySchema) q: any) {
+  listCustomers(@Tenant() t: TenantContext, @ZQuery(partyListQuerySchema) q: any) {
     return this.customers.list(t.tenantId, q);
   }
 
@@ -52,7 +52,14 @@ export class PartiesController {
       res.setHeader('Content-Disposition', `attachment; filename="statement-${id}.csv"`);
       return toCsv(
         ['Date', 'Type', 'Reference', 'Debit', 'Credit', 'Balance'],
-        s.entries.map((e) => [e.date.toISOString(), e.type, e.reference, e.debit, e.credit, e.balance ?? '']),
+        s.entries.map((e) => [
+          e.date.toISOString(),
+          e.type,
+          e.reference,
+          e.debit,
+          e.credit,
+          e.balance ?? '',
+        ]),
       );
     }
     return s;
@@ -66,7 +73,11 @@ export class PartiesController {
 
   @Put('customers/:id')
   @RequirePermissions(PERMISSIONS.CUSTOMER_MANAGE)
-  updateCustomer(@Tenant() t: TenantContext, @Param('id') id: string, @ZBody(customerSchema) body: any) {
+  updateCustomer(
+    @Tenant() t: TenantContext,
+    @Param('id') id: string,
+    @ZBody(customerSchema) body: any,
+  ) {
     return this.customers.update(t, id, body);
   }
 
@@ -78,13 +89,17 @@ export class PartiesController {
 
   @Post('customers/:id/payments')
   @RequirePermissions(PERMISSIONS.PAYMENT_RECEIVE)
-  receive(@Tenant() t: TenantContext, @Param('id') id: string, @ZBody(receivePaymentSchema) body: any) {
+  receive(
+    @Tenant() t: TenantContext,
+    @Param('id') id: string,
+    @ZBody(receivePaymentSchema) body: any,
+  ) {
     return this.customers.receivePayment(t, id, body);
   }
 
   @Get('suppliers')
   @RequirePermissions(PERMISSIONS.SUPPLIER_VIEW)
-  listSuppliers(@Tenant() t: TenantContext, @ZQuery(listQuerySchema) q: any) {
+  listSuppliers(@Tenant() t: TenantContext, @ZQuery(partyListQuerySchema) q: any) {
     return this.suppliers.list(t.tenantId, q);
   }
 
@@ -102,7 +117,11 @@ export class PartiesController {
 
   @Put('suppliers/:id')
   @RequirePermissions(PERMISSIONS.SUPPLIER_MANAGE)
-  updateSupplier(@Tenant() t: TenantContext, @Param('id') id: string, @ZBody(supplierSchema) body: any) {
+  updateSupplier(
+    @Tenant() t: TenantContext,
+    @Param('id') id: string,
+    @ZBody(supplierSchema) body: any,
+  ) {
     return this.suppliers.update(t, id, body);
   }
 
@@ -114,7 +133,11 @@ export class PartiesController {
 
   @Post('suppliers/:id/payments')
   @RequirePermissions(PERMISSIONS.PURCHASE_MANAGE)
-  paySupplier(@Tenant() t: TenantContext, @Param('id') id: string, @ZBody(receivePaymentSchema) body: any) {
+  paySupplier(
+    @Tenant() t: TenantContext,
+    @Param('id') id: string,
+    @ZBody(receivePaymentSchema) body: any,
+  ) {
     return this.suppliers.pay(t, id, body);
   }
 }

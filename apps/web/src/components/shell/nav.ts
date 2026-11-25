@@ -28,29 +28,67 @@ export interface NavItem {
   permission?: Permission;
 }
 
-export const NAV: { label: string; items: NavItem[] }[] = [
+export const NAV: { key: string; label: string; items: NavItem[] }[] = [
   {
+    key: 'daily',
     label: 'Daily work',
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: PERMISSIONS.DASHBOARD_VIEW },
+      {
+        href: '/dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
       { href: '/pos', label: 'Point of sale', icon: Store, permission: PERMISSIONS.SALE_CREATE },
       { href: '/sales', label: 'Sales', icon: ShoppingCart, permission: PERMISSIONS.SALE_VIEW },
       { href: '/invoices', label: 'Invoices', icon: Receipt, permission: PERMISSIONS.INVOICE_VIEW },
-      { href: '/customers', label: 'Customers', icon: Users, permission: PERMISSIONS.CUSTOMER_VIEW },
+      {
+        href: '/customers',
+        label: 'Customers',
+        icon: Users,
+        permission: PERMISSIONS.CUSTOMER_VIEW,
+      },
     ],
   },
   {
+    key: 'stock',
     label: 'Stock',
     items: [
-      { href: '/products', label: 'Products', icon: PackageSearch, permission: PERMISSIONS.PRODUCT_VIEW },
-      { href: '/categories', label: 'Categories', icon: FolderTree, permission: PERMISSIONS.PRODUCT_VIEW },
+      {
+        href: '/products',
+        label: 'Products',
+        icon: PackageSearch,
+        permission: PERMISSIONS.PRODUCT_VIEW,
+      },
+      {
+        href: '/categories',
+        label: 'Categories',
+        icon: FolderTree,
+        permission: PERMISSIONS.PRODUCT_VIEW,
+      },
       { href: '/inventory', label: 'Inventory', icon: Boxes, permission: PERMISSIONS.STOCK_VIEW },
-      { href: '/stock-adjustments', label: 'Stock adjustments', icon: SlidersHorizontal, permission: PERMISSIONS.STOCK_ADJUST },
-      { href: '/purchases', label: 'Purchases', icon: ClipboardList, permission: PERMISSIONS.PURCHASE_VIEW },
-      { href: '/suppliers', label: 'Suppliers', icon: Truck, permission: PERMISSIONS.SUPPLIER_VIEW },
+      {
+        href: '/stock-adjustments',
+        label: 'Stock adjustments',
+        icon: SlidersHorizontal,
+        permission: PERMISSIONS.STOCK_ADJUST,
+      },
+      {
+        href: '/purchases',
+        label: 'Purchases',
+        icon: ClipboardList,
+        permission: PERMISSIONS.PURCHASE_VIEW,
+      },
+      {
+        href: '/suppliers',
+        label: 'Suppliers',
+        icon: Truck,
+        permission: PERMISSIONS.SUPPLIER_VIEW,
+      },
     ],
   },
   {
+    key: 'money',
     label: 'Money',
     items: [
       { href: '/expenses', label: 'Expenses', icon: Wallet, permission: PERMISSIONS.EXPENSE_VIEW },
@@ -58,12 +96,28 @@ export const NAV: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    key: 'business',
     label: 'Business',
     items: [
-      { href: '/employees', label: 'Employees', icon: UserRound, permission: PERMISSIONS.EMPLOYEE_VIEW },
+      {
+        href: '/employees',
+        label: 'Employees',
+        icon: UserRound,
+        permission: PERMISSIONS.EMPLOYEE_VIEW,
+      },
       { href: '/roles', label: 'Roles', icon: ShieldCheck, permission: PERMISSIONS.EMPLOYEE_VIEW },
-      { href: '/settings', label: 'Settings', icon: Settings, permission: PERMISSIONS.SETTINGS_MANAGE },
-      { href: '/subscription', label: 'Subscription', icon: CreditCard, permission: PERMISSIONS.SUBSCRIPTION_MANAGE },
+      {
+        href: '/settings',
+        label: 'Settings',
+        icon: Settings,
+        permission: PERMISSIONS.SETTINGS_MANAGE,
+      },
+      {
+        href: '/subscription',
+        label: 'Subscription',
+        icon: CreditCard,
+        permission: PERMISSIONS.SUBSCRIPTION_MANAGE,
+      },
     ],
   },
 ];

@@ -8,6 +8,10 @@ import * as D from '@radix-ui/react-dialog';
 import {
   Bell,
   Check,
+  CheckCheck,
+  ChevronsLeft,
+  ChevronsRight,
+  Clock,
   MailWarning,
   X,
   ChevronsUpDown,
@@ -21,7 +25,7 @@ import {
   Sun,
   UserRound,
 } from 'lucide-react';
-import { Logo } from '@/components/logo';
+import { Logo, LogoMark } from '@/components/logo';
 import {
   Menu,
   MenuContent,
@@ -32,52 +36,104 @@ import {
 } from '@/components/ui/dropdown';
 import { Badge } from '@/components/ui/misc';
 import { api } from '@/lib/api';
-import { cn, formatRelative } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { toBnDigits as toBn } from '@/lib/i18n/digits';
 import { useCan, useSession, useSwitchTenant } from '@/hooks/use-session';
 import { useApi, useAction } from '@/hooks/use-api';
 import { ADMIN_NAV, LABELS, NAV, type NavItem } from './nav';
 import { usePosFullscreen } from '@/lib/pos-fullscreen';
 import { useI18n } from '@/lib/i18n/client';
+import { useLocalState } from '@/lib/local-store';
+import { Tooltip } from '@/components/ui/tooltip';
+import { useMoney } from '@/components/money';
+import { CommandPalette, openCommandPalette } from './command-palette';
 
-function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+/** Collapsed desktop sidebar (icons only), remembered per browser. */
+function useSidebarCollapsed() {
+  return useLocalState<boolean>('hk_sidebar_collapsed', false);
+}
+
+function NavLink({
+  item,
+  onNavigate,
+  collapsed,
+}: {
+  item: NavItem;
+  onNavigate?: () => void;
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const active =
     item.href === '/super-admin'
       ? pathname === item.href
       : pathname === item.href || pathname.startsWith(item.href + '/');
   const Icon = item.icon;
-  return (
+  const label = item.href.startsWith('/super-admin')
+    ? item.label
+    : (t.panel.nav.items[item.href.slice(1)] ?? item.label);
+  const link = (
     <Link
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
+      aria-label={collapsed ? label : undefined}
       className={cn(
-        'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] text-slate-300 hover:bg-white/5 hover:text-white',
+        'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] text-slate-300 hover:bg-white/5 hover:text-white coarse:py-2.5',
         active && 'bg-white/10 font-medium text-white',
+        collapsed && 'justify-center px-0 py-2',
       )}
     >
       <Icon className="size-4 shrink-0" />
-      {item.label}
+      {!collapsed && label}
     </Link>
+  );
+  return collapsed ? (
+    <Tooltip content={label} side="right">
+      {link}
+    </Tooltip>
+  ) : (
+    link
   );
 }
 
-function SidebarContent({ admin, onNavigate }: { admin?: boolean; onNavigate?: () => void }) {
+function SidebarContent({
+  admin,
+  onNavigate,
+  collapsed,
+}: {
+  admin?: boolean;
+  onNavigate?: () => void;
+  collapsed?: boolean;
+}) {
   const can = useCan();
   const { data } = useSession();
+  const { t } = useI18n();
+  const n = t.panel.nav;
+  const [, setCollapsed] = useSidebarCollapsed();
+  // The drawer on small screens never collapses; only the fixed desktop sidebar has the toggle.
+  const desktop = !onNavigate;
   return (
     <div className="flex h-full flex-col bg-navy text-white">
-      <div className="flex h-14 items-center px-4">
-        <Link href={admin ? '/super-admin' : '/dashboard'} onClick={onNavigate}>
-          <Logo onDark />
+      <div className={cn('flex h-14 items-center px-4', collapsed && 'justify-center px-0')}>
+        <Link
+          href={admin ? '/super-admin' : '/dashboard'}
+          onClick={onNavigate}
+          aria-label="HisabKhata"
+        >
+          {collapsed ? <LogoMark inverted className="size-8" /> : <Logo onDark />}
         </Link>
       </div>
-      {!admin && <TenantSwitcher />}
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Main">
+      {!admin && !collapsed && <TenantSwitcher />}
+      {!admin && <TrialBadge collapsed={collapsed} />}
+      <nav
+        className={cn('flex-1 space-y-5 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}
+        aria-label={n.main}
+      >
         {admin ? (
           <div className="space-y-0.5">
             {ADMIN_NAV.map((i) => (
-              <NavLink key={i.href} item={i} onNavigate={onNavigate} />
+              <NavLink key={i.href} item={i} onNavigate={onNavigate} collapsed={collapsed} />
             ))}
           </div>
         ) : (
@@ -86,10 +142,16 @@ function SidebarContent({ admin, onNavigate }: { admin?: boolean; onNavigate?: (
             if (!items.length) return null;
             return (
               <div key={group.label}>
-                <p className="mb-1 px-2.5 text-xs text-slate-400">{group.label}</p>
+                {collapsed ? (
+                  <div className="mx-2 mb-2 border-t border-white/10" aria-hidden />
+                ) : (
+                  <p className="mb-1 px-2.5 text-xs text-slate-400">
+                    {n.groups[group.key] ?? group.label}
+                  </p>
+                )}
                 <div className="space-y-0.5">
                   {items.map((i) => (
-                    <NavLink key={i.href} item={i} onNavigate={onNavigate} />
+                    <NavLink key={i.href} item={i} onNavigate={onNavigate} collapsed={collapsed} />
                   ))}
                 </div>
               </div>
@@ -98,18 +160,81 @@ function SidebarContent({ admin, onNavigate }: { admin?: boolean; onNavigate?: (
         )}
       </nav>
       {data?.user.isSuperAdmin && (
-        <div className="border-t border-white/10 p-3">
-          <Link
-            href={admin ? '/dashboard' : '/super-admin'}
-            onClick={onNavigate}
-            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-slate-300 hover:bg-white/5 hover:text-white"
-          >
-            <ShieldCheck className="size-4" />
-            {admin ? 'Back to my business' : 'Platform admin'}
-          </Link>
+        <div className={cn('border-t border-white/10', collapsed ? 'p-2' : 'p-3')}>
+          <NavLink
+            item={{
+              href: admin ? '/dashboard' : '/super-admin',
+              label: admin ? n.backToBusiness : n.platformAdmin,
+              icon: ShieldCheck,
+            }}
+            onNavigate={onNavigate}
+            collapsed={collapsed}
+          />
+        </div>
+      )}
+      {desktop && (
+        <div className={cn('border-t border-white/10', collapsed ? 'p-2' : 'p-3')}>
+          <Tooltip content={collapsed ? n.expand : null} side="right">
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? n.expand : n.collapse}
+              aria-expanded={!collapsed}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] text-slate-400 hover:bg-white/5 hover:text-white',
+                collapsed && 'justify-center px-0 py-2',
+              )}
+            >
+              {collapsed ? (
+                <ChevronsRight className="size-4" />
+              ) : (
+                <ChevronsLeft className="size-4" />
+              )}
+              {!collapsed && n.collapse}
+            </button>
+          </Tooltip>
         </div>
       )}
     </div>
+  );
+}
+
+/** "Trial: n days left" under the shop switcher, for people who can act on it. */
+function TrialBadge({ collapsed }: { collapsed?: boolean }) {
+  const { data } = useSession();
+  const can = useCan();
+  const { t } = useI18n();
+  const plan = data?.plan;
+  if (!plan || plan.status !== 'TRIALING' || !plan.endsAt || !can('subscription.manage'))
+    return null;
+  const days = Math.ceil((new Date(plan.endsAt).getTime() - Date.now()) / 86_400_000);
+  const label = days < 0 ? t.panel.nav.trialEnded : t.panel.nav.trialLeft(days);
+  const urgent = days <= 3;
+  const badge = (
+    <Link
+      href="/subscription"
+      aria-label={`${label}. ${t.panel.nav.choosePlan}`}
+      title={t.panel.nav.choosePlan}
+      className={cn(
+        'flex items-center gap-2 rounded-md text-xs font-medium',
+        urgent
+          ? 'bg-warning/20 text-amber-200 hover:bg-warning/30'
+          : 'bg-white/5 text-slate-300 hover:bg-white/10',
+        collapsed ? 'mx-2 mt-2 justify-center py-2' : 'mx-3 mt-2 px-2.5 py-1.5',
+      )}
+    >
+      <Clock className="size-3.5 shrink-0" />
+      {!collapsed && <span className="flex-1 truncate">{label}</span>}
+      {!collapsed && urgent && (
+        <span className="shrink-0 underline underline-offset-2">{t.panel.nav.choosePlan}</span>
+      )}
+    </Link>
+  );
+  return collapsed ? (
+    <Tooltip content={label} side="right">
+      {badge}
+    </Tooltip>
+  ) : (
+    badge
   );
 }
 
@@ -117,6 +242,8 @@ function TenantSwitcher() {
   const { data } = useSession();
   const switchTenant = useSwitchTenant();
   const router = useRouter();
+  const { t: i18n } = useI18n();
+  const n = i18n.panel.nav;
   if (!data?.activeTenant) return null;
   return (
     <div className="px-3">
@@ -126,13 +253,13 @@ function TenantSwitcher() {
             <span className="block truncate font-medium">{data.activeTenant.name}</span>
             <span className="block text-xs text-slate-400">
               {data.activeTenant.role}
-              {data.plan ? `, ${data.plan.name} plan` : ''}
+              {data.plan ? `, ${n.planSuffix(data.plan.name)}` : ''}
             </span>
           </span>
           <ChevronsUpDown className="size-4 shrink-0 text-slate-400" />
         </MenuTrigger>
         <MenuContent align="start" className="w-60">
-          <MenuLabel>Your businesses</MenuLabel>
+          <MenuLabel>{n.yourBusinesses}</MenuLabel>
           {data.tenants.map((t) => (
             <MenuItem
               key={t.id}
@@ -141,12 +268,12 @@ function TenantSwitcher() {
             >
               <span className="flex-1 truncate">{t.name}</span>
               {t.id === data.activeTenant?.id && <Check className="text-positive" />}
-              {t.status !== 'ACTIVE' && <Badge tone="negative">Suspended</Badge>}
+              {t.status !== 'ACTIVE' && <Badge tone="negative">{n.suspended}</Badge>}
             </MenuItem>
           ))}
           <MenuSeparator />
           <MenuItem onSelect={() => router.push('/onboarding?new=1')}>
-            <Plus /> Add a business
+            <Plus /> {n.addBusiness}
           </MenuItem>
         </MenuContent>
       </Menu>
@@ -157,11 +284,13 @@ function TenantSwitcher() {
 function Breadcrumbs() {
   const pathname = usePathname();
   const parts = pathname.split('/').filter(Boolean);
+  const { t } = useI18n();
   return (
     <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-sm md:flex">
       {parts.map((p, i) => {
         const href = '/' + parts.slice(0, i + 1).join('/');
-        const label = LABELS[p] ?? (p.length > 16 ? 'Details' : p);
+        const label =
+          t.panel.nav.items[p] ?? LABELS[p] ?? (p.length > 16 ? t.panel.nav.items.details : p);
         const last = i === parts.length - 1;
         return (
           <React.Fragment key={href}>
@@ -180,77 +309,191 @@ function Breadcrumbs() {
   );
 }
 
+/** The top-bar search opens the command palette. */
 function QuickSearch() {
-  const router = useRouter();
-  const can = useCan();
-  const [q, setQ] = React.useState('');
-  if (!can('product.view')) return null;
+  const { t } = useI18n();
+  const [mac, setMac] = React.useState(false);
+  React.useEffect(() => setMac(/Mac|iPhone|iPad/.test(navigator.platform)), []);
   return (
-    <form
-      role="search"
-      className="relative ml-auto hidden w-64 lg:block"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (q.trim()) router.push(`/products?search=${encodeURIComponent(q.trim())}`);
-      }}
-    >
-      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Find a product, SKU or barcode"
-        aria-label="Find a product"
-        className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-sm placeholder:text-muted-foreground"
-      />
-    </form>
+    <>
+      <button
+        onClick={openCommandPalette}
+        className="ml-auto hidden h-8 w-64 items-center gap-2 rounded-md border border-input bg-background px-2.5 text-left text-sm text-muted-foreground hover:bg-muted lg:flex"
+      >
+        <Search className="size-4 shrink-0" />
+        <span className="flex-1 truncate">{t.panel.nav.search}</span>
+        <kbd className="rounded border bg-surface px-1.5 text-2xs">{mac ? '⌘K' : 'Ctrl K'}</kbd>
+      </button>
+      <button
+        onClick={openCommandPalette}
+        className="ml-auto rounded-md p-2 hover:bg-muted lg:hidden"
+        aria-label={t.panel.nav.searchHint}
+      >
+        <Search className="size-4" />
+      </button>
+    </>
   );
 }
 
+interface Note {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  link: string | null;
+  data: any;
+  readAt: string | null;
+  createdAt: string;
+}
+
+/** Live alerts are stored with structured data so they read naturally in either language. */
+function useNoteText() {
+  const { t, locale, tr } = useI18n();
+  const money = useMoney();
+  const a = t.panel.alerts;
+  return (n: Note): { title: string; body: string } => {
+    const raw = { title: n.title, body: n.body };
+    const d = n.data ?? {};
+    const names = (list: string[] | undefined, count: number) =>
+      (list ?? []).join(', ') + (count > (list?.length ?? 0) ? ` ${a.andMore}` : '');
+    switch (n.type) {
+      case 'low-stock':
+        return d.count ? { title: a.lowStock(d.count), body: names(d.names, d.count) } : raw;
+      case 'out-of-stock':
+        return d.count ? { title: a.outOfStock(d.count), body: names(d.names, d.count) } : raw;
+      case 'customer-dues':
+        return d.count
+          ? { title: a.customerDues(d.count), body: a.customerDuesBody(money(d.amount)) }
+          : raw;
+      case 'supplier-dues':
+        return d.count
+          ? { title: a.supplierDues(d.count), body: a.supplierDuesBody(money(d.amount)) }
+          : raw;
+      case 'trial-ending':
+        return typeof d.days === 'number'
+          ? { title: a.trialEnding(d.days), body: a.trialEndingBody }
+          : raw;
+      default:
+        return locale === 'bn'
+          ? { title: tr(n.title) ?? n.title, body: tr(n.body) ?? n.body }
+          : raw;
+    }
+  };
+}
+
+function relative(value: string, locale: 'en' | 'bn') {
+  const diff = (new Date(value).getTime() - Date.now()) / 1000;
+  const rtf = new Intl.RelativeTimeFormat(locale === 'bn' ? 'bn-BD' : 'en', { numeric: 'auto' });
+  const abs = Math.abs(diff);
+  if (abs < 60) return rtf.format(0, 'second');
+  if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
+  if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
+  return rtf.format(Math.round(diff / 86400), 'day');
+}
+
 function Notifications() {
-  const { data } = useApi<{ items: any[]; unread: number }>('/notifications');
-  const read = useAction(() => api('/notifications/read-all', { method: 'POST' }), {
+  const { t, locale } = useI18n();
+  const a = t.panel.alerts;
+  const text = useNoteText();
+  const { data } = useApi<{ items: Note[]; unread: number }>('/notifications');
+  const readAll = useAction(() => api('/notifications/read-all', { method: 'POST' }), {
+    invalidate: [['/notifications']],
+  });
+  const readOne = useAction((id: string) => api(`/notifications/${id}/read`, { method: 'POST' }), {
     invalidate: [['/notifications']],
   });
   const router = useRouter();
+  // The tick button sits inside a menu item; this keeps the menu open when it is pressed.
+  const tick = React.useRef(false);
+  const unread = data?.unread ?? 0;
+  const count = unread > 9 ? '9+' : String(locale === 'bn' ? toBn(unread) : unread);
   return (
-    <Menu onOpenChange={(o) => !o && data?.unread && read.mutate(undefined)}>
+    <Menu>
       <MenuTrigger
         className="relative rounded-md p-2 hover:bg-muted"
-        aria-label={`Notifications${data?.unread ? `, ${data.unread} unread` : ''}`}
+        aria-label={`${a.title}${unread ? `, ${a.unread(unread)}` : ''}`}
       >
         <Bell className="size-4" />
-        {!!data?.unread && (
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-negative" />
+        {!!unread && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-negative px-1 text-[10px] font-semibold leading-none text-white">
+            {count}
+          </span>
         )}
       </MenuTrigger>
-      <MenuContent className="w-80 p-0">
-        <div className="border-b px-3 py-2 text-sm font-medium">Notifications</div>
+      <MenuContent className="w-[min(92vw,22rem)] p-0">
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <p className="text-sm font-medium">
+            {a.title}
+            {!!unread && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {a.unread(unread)}
+              </span>
+            )}
+          </p>
+          {!!unread && (
+            <button
+              onClick={() => readAll.mutate(undefined)}
+              className="flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <CheckCheck className="size-3.5" /> {a.markAll}
+            </button>
+          )}
+        </div>
         <div className="max-h-96 overflow-y-auto">
           {!data?.items.length && (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-              Nothing new. Stock alerts and billing notices appear here.
-            </p>
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">{a.empty}</p>
           )}
-          {data?.items.map((n) => (
-            <MenuItem
-              key={n.id}
-              className="block rounded-none border-b px-3 py-2.5 last:border-0"
-              onSelect={() => n.link && router.push(n.link)}
-            >
-              <div className="flex items-start gap-2">
-                {!n.readAt && (
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sky-soft" />
+          {data?.items.map((n) => {
+            const { title, body } = text(n);
+            return (
+              <MenuItem
+                key={n.id}
+                className={cn(
+                  'group block rounded-none border-b px-3 py-2.5 last:border-0',
+                  !n.readAt && 'bg-accent/40',
                 )}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{n.title}</p>
-                  <p className="line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
-                  <p className="mt-0.5 text-2xs text-muted-foreground">
-                    {formatRelative(n.createdAt)}
-                  </p>
+                onSelect={(e) => {
+                  if (tick.current) {
+                    tick.current = false;
+                    e.preventDefault();
+                    readOne.mutate(n.id);
+                    return;
+                  }
+                  if (!n.readAt) readOne.mutate(n.id);
+                  if (n.link) router.push(n.link);
+                }}
+              >
+                <div className="flex items-start gap-2">
+                  <span
+                    className={cn(
+                      'mt-1.5 size-1.5 shrink-0 rounded-full',
+                      n.readAt ? 'bg-transparent' : 'bg-sky-soft',
+                    )}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className={cn('text-sm', !n.readAt && 'font-medium')}>{title}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">{body}</p>
+                    <p className="mt-0.5 text-2xs text-muted-foreground">
+                      {relative(n.createdAt, locale)}
+                    </p>
+                  </div>
+                  {!n.readAt && (
+                    <span
+                      role="button"
+                      tabIndex={-1}
+                      onPointerDown={() => (tick.current = true)}
+                      aria-label={a.markRead}
+                      title={a.markRead}
+                      className="shrink-0 rounded p-1 text-muted-foreground opacity-60 hover:bg-muted hover:text-foreground group-hover:opacity-100 coarse:opacity-100"
+                    >
+                      <Check className="size-3.5" />
+                    </span>
+                  )}
                 </div>
-              </div>
-            </MenuItem>
-          ))}
+              </MenuItem>
+            );
+          })}
         </div>
       </MenuContent>
     </Menu>
@@ -424,14 +667,31 @@ export function AppShell({ children, admin }: { children: React.ReactNode; admin
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
   const [posFullscreen] = usePosFullscreen();
+  const [collapsed] = useSidebarCollapsed();
+  const { t } = useI18n();
   // Full-screen POS: no sidebar, no top bar, every pixel for the counter.
   if (!admin && posFullscreen && pathname === '/pos') {
-    return <main className="min-h-screen bg-background p-3 sm:p-4">{children}</main>;
+    return (
+      <>
+        <main className="min-h-screen bg-background p-3 sm:p-4">{children}</main>
+        <CommandPalette />
+      </>
+    );
   }
   return (
-    <div className="min-h-screen lg:pl-60">
-      <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-60 dark:border-r dark:border-white/10 lg:block">
-        <SidebarContent admin={admin} />
+    <div
+      className={cn(
+        'min-h-screen transition-[padding] duration-200',
+        collapsed ? 'lg:pl-16' : 'lg:pl-60',
+      )}
+    >
+      <aside
+        className={cn(
+          'no-print fixed inset-y-0 left-0 z-30 hidden transition-[width] duration-200 dark:border-r dark:border-white/10 lg:block',
+          collapsed ? 'w-16' : 'w-60',
+        )}
+      >
+        <SidebarContent admin={admin} collapsed={collapsed} />
       </aside>
       <D.Root open={open} onOpenChange={setOpen}>
         <D.Portal>
@@ -440,7 +700,7 @@ export function AppShell({ children, admin }: { children: React.ReactNode; admin
             className="fixed inset-y-0 left-0 z-50 w-64 lg:hidden"
             aria-describedby={undefined}
           >
-            <D.Title className="sr-only">Navigation</D.Title>
+            <D.Title className="sr-only">{t.panel.nav.navigation}</D.Title>
             <SidebarContent admin={admin} onNavigate={() => setOpen(false)} />
           </D.Content>
         </D.Portal>
@@ -449,7 +709,7 @@ export function AppShell({ children, admin }: { children: React.ReactNode; admin
         <button
           className="rounded-md p-2 hover:bg-muted lg:hidden"
           onClick={() => setOpen(true)}
-          aria-label="Open navigation"
+          aria-label={t.panel.nav.openNav}
         >
           <MenuIcon className="size-5" />
         </button>
@@ -463,6 +723,7 @@ export function AppShell({ children, admin }: { children: React.ReactNode; admin
       <VerifyBanner />
       {!admin && <Announcements />}
       <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:py-8">{children}</main>
+      {!admin && <CommandPalette />}
     </div>
   );
 }

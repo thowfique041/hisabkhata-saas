@@ -60,6 +60,10 @@ export const listQuerySchema = z.object({
 });
 export type ListQuery = z.infer<typeof listQuerySchema>;
 
+/** Customer and supplier lists can be narrowed to people with money outstanding. */
+export const partyListQuerySchema = listQuerySchema.extend({
+  dues: z.enum(['all', 'owing', 'overdue']).default('all'),
+});
 export const dateRangeSchema = z.object({
   from: isoDate.optional(),
   to: isoDate.optional(),

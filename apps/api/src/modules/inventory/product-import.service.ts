@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { productImportRowSchema, type ProductImportRow } from '@hisabkhata/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../core/audit.service';
+import { AlertsService } from '../core/alerts.service';
 import { CounterService } from '../core/counter.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { StockService } from './stock.service';
@@ -45,6 +46,7 @@ export class ProductImportService {
     private readonly counters: CounterService,
     private readonly audit: AuditService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly alerts: AlertsService,
   ) {}
 
   /** Validates every row (types, duplicates in the file and against existing products). */
@@ -190,6 +192,7 @@ export class ProductImportService {
       entity: 'Product',
       metadata: { count: parsed.length },
     });
+    await this.alerts.invalidate(ctx.tenantId);
     return { ...report, created: parsed.length };
   }
 }

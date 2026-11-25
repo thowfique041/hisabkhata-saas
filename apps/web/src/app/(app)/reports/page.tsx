@@ -10,9 +10,11 @@ import { useSession } from '@/hooks/use-session';
 import { Money } from '@/components/money';
 import { EmptyState, ErrorState, PageHeader, TableSkeleton } from '@/components/page';
 import { Button } from '@/components/ui/button';
-import { Input, Select } from '@/components/ui/input';
+import { Select } from '@/components/ui/input';
 import { RequirePermission } from '@/components/shell/guards';
-import { cn, isoDay } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { DateRangePicker } from '@/components/date-range-picker';
+import { presetRange, rangeToQuery, type DateRange } from '@/lib/dhaka-dates';
 
 const REPORTS = [
   { key: 'sales', label: 'Sales', advanced: false, range: true },
@@ -26,26 +28,9 @@ const REPORTS = [
   { key: 'payments', label: 'Payments and dues', advanced: true, range: true },
 ];
 
-const PRESETS: { label: string; days?: number; month?: 'this' | 'last'; year?: boolean }[] = [
-  { label: 'Last 7 days', days: 7 },
-  { label: 'Last 30 days', days: 30 },
-  { label: 'This month', month: 'this' },
-  { label: 'Last month', month: 'last' },
-  { label: 'This year', year: true },
-];
-
-function rangeFor(p: (typeof PRESETS)[number]) {
-  const now = new Date();
-  if (p.days) return { from: isoDay(new Date(now.getTime() - (p.days - 1) * 86400000)), to: isoDay(now) };
-  if (p.year) return { from: `${now.getFullYear()}-01-01`, to: isoDay(now) };
-  const m = p.month === 'last' ? now.getMonth() - 1 : now.getMonth();
-  const start = new Date(now.getFullYear(), m, 1);
-  const end = p.month === 'last' ? new Date(now.getFullYear(), m + 1, 0) : now;
-  return { from: isoDay(start), to: isoDay(end) };
-}
-
 function Cell({ type, value }: { type: string; value: any }) {
-  if (type === 'money') return <Money value={value} signed={String(value).startsWith('-') ? 'negative' : undefined} />;
+  if (type === 'money')
+    return <Money value={value} signed={String(value).startsWith('-') ? 'negative' : undefined} />;
   if (type === 'qty') return <>{formatQty(String(value))}</>;
   if (type === 'percent') return <>{value}%</>;
   return <>{value}</>;
@@ -55,17 +40,26 @@ function Reports() {
   const plan = useSession().data?.plan;
   const advancedAllowed = plan?.features.includes('ADVANCED_REPORTS');
   const [key, setKey] = React.useState('sales');
-  const [range, setRange] = React.useState(rangeFor(PRESETS[1]));
+  const [range, setRange] = React.useState<DateRange>(() => presetRange('last30'));
   const [period, setPeriod] = React.useState('daily');
   const def = REPORTS.find((r) => r.key === key)!;
   const locked = def.advanced && !advancedAllowed;
-  const query = { from: new Date(range.from + 'T00:00:00').toISOString(), to: new Date(range.to + 'T23:59:59').toISOString(), period: key === 'sales' ? period : undefined };
-  const { data, isLoading, error, refetch } = useApi<any>(locked ? null : `/reports/${key}`, def.range ? query : {});
-  const exp = (format: 'csv' | 'pdf') => download(`/reports/${key}`, { ...(def.range ? query : {}), format }, `${key}.${format}`).catch((e) => toast.error(errorMessage(e)));
+  const query = { ...rangeToQuery(range), period: key === 'sales' ? period : undefined };
+  const { data, isLoading, error, refetch } = useApi<any>(
+    locked ? null : `/reports/${key}`,
+    def.range ? query : {},
+  );
+  const exp = (format: 'csv' | 'pdf') =>
+    download(`/reports/${key}`, { ...(def.range ? query : {}), format }, `${key}.${format}`).catch(
+      (e) => toast.error(errorMessage(e)),
+    );
 
   return (
     <>
-      <PageHeader title="Reports" description="Figures are calculated from your records each time you open a report." />
+      <PageHeader
+        title="Reports"
+        description="Figures are calculated from your records each time you open a report."
+      />
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         <nav aria-label="Reports" className="flex gap-1 overflow-x-auto lg:flex-col">
           {REPORTS.map((r) => (
@@ -73,7 +67,10 @@ function Reports() {
               key={r.key}
               onClick={() => setKey(r.key)}
               aria-current={key === r.key ? 'page' : undefined}
-              className={cn('flex items-center justify-between whitespace-nowrap rounded-md px-3 py-2 text-left text-sm', key === r.key ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
+              className={cn(
+                'flex items-center justify-between whitespace-nowrap rounded-md px-3 py-2 text-left text-sm',
+                key === r.key ? 'bg-primary text-primary-foreground' : 'hover:bg-muted',
+              )}
             >
               {r.label}
               {r.advanced && !advancedAllowed && <Lock className="size-3.5 opacity-60" />}
@@ -86,18 +83,14 @@ function Reports() {
               <h2 className="text-base font-semibold">{data?.title ?? def.label}</h2>
               {def.range && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Select className="h-8 w-36" onChange={(e) => e.target.value && setRange(rangeFor(PRESETS[Number(e.target.value)]))} defaultValue="1" aria-label="Date range">
-                    {PRESETS.map((p, i) => (
-                      <option key={p.label} value={i}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input type="date" className="h-8 w-36" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} aria-label="From" />
-                  <span className="text-sm text-muted-foreground">to</span>
-                  <Input type="date" className="h-8 w-36" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} aria-label="To" />
+                  <DateRangePicker className="h-8 w-52" value={range} onChange={setRange} />
                   {key === 'sales' && (
-                    <Select className="h-8 w-28" value={period} onChange={(e) => setPeriod(e.target.value)} aria-label="Group by">
+                    <Select
+                      className="h-8 w-28"
+                      value={period}
+                      onChange={(e) => setPeriod(e.target.value)}
+                      aria-label="Group by"
+                    >
                       <option value="daily">Daily</option>
                       <option value="weekly">Weekly</option>
                       <option value="monthly">Monthly</option>
@@ -119,7 +112,16 @@ function Reports() {
             )}
           </div>
           {locked ? (
-            <EmptyState icon={Lock} title={`${def.label} is part of Basic and Premium`} description="Upgrade your plan to see profit, product, customer and payment reports." action={<Button asChild><Link href="/subscription">See plans</Link></Button>} />
+            <EmptyState
+              icon={Lock}
+              title={`${def.label} is part of Basic and Premium`}
+              description="Upgrade your plan to see profit, product, customer and payment reports."
+              action={
+                <Button asChild>
+                  <Link href="/subscription">See plans</Link>
+                </Button>
+              }
+            />
           ) : error ? (
             <ErrorState error={error} onRetry={() => refetch()} />
           ) : isLoading || !data ? (
@@ -152,7 +154,16 @@ function Reports() {
                     </thead>
                     <tbody>
                       {data.rows.map((r: any, i: number) => (
-                        <tr key={i} className={cn(key === 'profit-loss' && /^(Net revenue|Gross profit|Net profit|Total expenses)$/.test(r.line) && 'bg-muted/40 font-semibold')}>
+                        <tr
+                          key={i}
+                          className={cn(
+                            key === 'profit-loss' &&
+                              /^(Net revenue|Gross profit|Net profit|Total expenses)$/.test(
+                                r.line,
+                              ) &&
+                              'bg-muted/40 font-semibold',
+                          )}
+                        >
                           {data.columns.map((c: any) => (
                             <td key={c.key} className={c.type !== 'text' ? 'r' : ''}>
                               <Cell type={c.type} value={r[c.key]} />
@@ -164,7 +175,9 @@ function Reports() {
                   </table>
                 </div>
               ) : (
-                <p className="px-4 py-12 text-center text-sm text-muted-foreground">No records in this period.</p>
+                <p className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  No records in this period.
+                </p>
               )}
             </>
           )}
@@ -181,4 +194,3 @@ export default function ReportsPage() {
     </RequirePermission>
   );
 }
-
