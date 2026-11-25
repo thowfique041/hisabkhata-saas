@@ -2,7 +2,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
 import { randomUUID } from 'node:crypto';
@@ -39,6 +41,7 @@ export function sniffImage(buf: Buffer): { mime: string; ext: string } | null {
 
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
   private readonly driver: 'local' | 'cloudinary';
 
   constructor(
@@ -84,6 +87,15 @@ export class StorageService {
             (err, res) => (err || !res ? reject(err ?? new Error('Upload failed')) : resolve(res)),
           )
           .end(input.buffer);
+      }).catch((err: { message?: string; http_code?: number }) => {
+        // Cloudinary rejects with a plain object, not an Error; log what it said, never the keys.
+        this.logger.error(
+          { provider: 'cloudinary', httpCode: err?.http_code, reason: err?.message },
+          'Image upload failed',
+        );
+        throw new ServiceUnavailableException(
+          'Could not save the image right now. Please try again later.',
+        );
       });
       key = result.public_id;
     } else {
