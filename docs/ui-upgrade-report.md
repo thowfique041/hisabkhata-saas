@@ -26,7 +26,7 @@ Plan: [ui-upgrade-plan.md](ui-upgrade-plan.md). There is one commit per phase on
 - **Switchers:** a language switcher in the header, the mobile drawer, the footer and the auth pages. A theme toggle sits next to it.
 - **Font:** Hind Siliguri stays self-hosted through `@fontsource`, which is already in the font stack and needs no network at build time. I added the 500 weight and gave Bengali text more line height without negative tracking. "চানাচুর" and the rest of the Bangla renders correctly in both languages.
 
-## Phase 2: home page (`b9b0a2f`)
+## Phase 2: home page (`a13cf6d`)
 
 - **Animated hero invoice** (Framer Motion). It plays once when it comes into view:
   - items appear one by one;
