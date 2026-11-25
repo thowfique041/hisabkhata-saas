@@ -58,7 +58,8 @@ export const en = {
     perMonth: 'month',
     perYear: 'year',
     tryAgain: 'Try again',
-    connecting: 'Connecting to server… this can take up to a minute after a quiet spell.',
+    connecting:
+      'Connecting to server… after a quiet spell this can take a minute or two. Please keep this page open.',
     serverAsleep: 'We could not reach the server. Check your connection and try again.',
     offline:
       'We could not reach the server. It may still be starting up, so please try again in a minute.',

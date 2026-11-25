@@ -32,9 +32,10 @@ export function wakeApi() {
 
 /**
  * Resolves true as soon as the API answers a health check, or false after `maxMs`.
+ * Render's free tier has been seen to need more than 90 s to wake, so the default is 3 minutes.
  * Concurrent callers share one polling loop.
  */
-export function waitForApi(maxMs = 90_000): Promise<boolean> {
+export function waitForApi(maxMs = 180_000): Promise<boolean> {
   if (awake) return Promise.resolve(true);
   if (typeof window === 'undefined') return Promise.resolve(false);
   pending ??= (async () => {

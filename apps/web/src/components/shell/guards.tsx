@@ -24,7 +24,7 @@ function FullScreenLoader() {
       <LogoMark className="size-9 animate-pulse" />
       {slow && (
         <p className="max-w-xs text-sm text-muted-foreground">
-          Starting the server. After a quiet spell this can take up to a minute.
+          Starting the server. After a quiet spell this can take a minute or two.
         </p>
       )}
     </div>

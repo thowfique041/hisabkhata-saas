@@ -8,8 +8,8 @@ export function useSession() {
     queryKey: ['session'],
     queryFn: () => api('/auth/session'),
     staleTime: 60_000,
-    // A free API instance can take up to a minute to wake; keep trying instead of bouncing to login.
-    retry: (count, err) => isUnreachable(err) && count < 8,
+    // A free API instance can take a couple of minutes to wake; keep trying instead of bouncing to login.
+    retry: (count, err) => isUnreachable(err) && count < 40,
     retryDelay: 4000,
   });
 }
