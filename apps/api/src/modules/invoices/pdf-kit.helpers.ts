@@ -1,6 +1,35 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import PDFDocument from 'pdfkit';
+import type PDFDocumentType from 'pdfkit';
+
+type PdfKitCtor = typeof PDFDocumentType;
+let pdfkit: Promise<PdfKitCtor> | undefined;
+// A real dynamic import: TypeScript would turn import() into require() in CommonJS output.
+const nativeImport = new Function('m', 'return import(m)') as (
+  m: string,
+) => Promise<{ default: PdfKitCtor }>;
+
+/**
+ * pdfkit depends on fontkit, which ships only as an ES module. Node can require() it, but some
+ * serverless runtimes (Vercel) refuse require() of ES modules, so fall back to import() there.
+ */
+function loadPdfKit(): Promise<PdfKitCtor> {
+  pdfkit ??= (async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const m = require('pdfkit');
+      return (m.default ?? m) as PdfKitCtor;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ERR_REQUIRE_ESM') throw err;
+      const m = await nativeImport('pdfkit');
+      return m.default;
+    }
+  })().catch((err) => {
+    pdfkit = undefined;
+    throw err;
+  });
+  return pdfkit;
+}
 import { currencySymbol } from '@hisabkhata/shared';
 
 const FONT_DIR = path.resolve(__dirname, '../../../assets/fonts');
@@ -25,8 +54,18 @@ export const COLORS = {
   red: '#B91C1C',
 };
 
-export function createDoc(meta: { title: string; author: string }, opts: { layout?: 'portrait' | 'landscape'; margin?: number } = {}) {
-  const doc = new PDFDocument({ size: 'A4', layout: opts.layout ?? 'portrait', margin: opts.margin ?? 40, info: { Title: meta.title, Author: meta.author, Creator: 'HisabKhata' }, bufferPages: true });
+export async function createDoc(
+  meta: { title: string; author: string },
+  opts: { layout?: 'portrait' | 'landscape'; margin?: number } = {},
+) {
+  const PDFDocument = await loadPdfKit();
+  const doc = new PDFDocument({
+    size: 'A4',
+    layout: opts.layout ?? 'portrait',
+    margin: opts.margin ?? 40,
+    info: { Title: meta.title, Author: meta.author, Creator: 'HisabKhata' },
+    bufferPages: true,
+  });
   doc.registerFont(FONTS.regular, fontPath('inter-latin-400-normal.woff'));
   doc.registerFont(FONTS.semibold, fontPath('inter-latin-600-normal.woff'));
   doc.registerFont(FONTS.bold, fontPath('inter-latin-700-normal.woff'));
@@ -56,12 +95,21 @@ export function mixedText(
   text: string,
   x: number,
   y: number,
-  opts: { width?: number; size?: number; bold?: boolean; color?: string; align?: 'left' | 'right' } = {},
+  opts: {
+    width?: number;
+    size?: number;
+    bold?: boolean;
+    color?: string;
+    align?: 'left' | 'right';
+  } = {},
 ) {
   const parts = runs(text);
   doc.fontSize(opts.size ?? 9).fillColor(opts.color ?? COLORS.ink);
   if (opts.align === 'right' && opts.width) {
-    const total = parts.reduce((w, p) => w + doc.font(fontFor(p.bn, opts.bold)).widthOfString(p.text), 0);
+    const total = parts.reduce(
+      (w, p) => w + doc.font(fontFor(p.bn, opts.bold)).widthOfString(p.text),
+      0,
+    );
     let cx = x + opts.width - total;
     for (const p of parts) {
       doc.font(fontFor(p.bn, opts.bold)).text(p.text, cx, y, { lineBreak: false });
@@ -95,7 +143,14 @@ export function moneyText(
   const negative = formatted.startsWith('-');
   const number = formatted.replace('-', '').replace(symbol, '');
   doc.fontSize(opts.size ?? 9).fillColor(opts.color ?? COLORS.ink);
-  const symFont = currency === 'BDT' ? (opts.bold ? FONTS.bnBold : FONTS.bn) : opts.bold ? FONTS.semibold : FONTS.regular;
+  const symFont =
+    currency === 'BDT'
+      ? opts.bold
+        ? FONTS.bnBold
+        : FONTS.bn
+      : opts.bold
+        ? FONTS.semibold
+        : FONTS.regular;
   const numFont = opts.bold ? FONTS.semibold : FONTS.regular;
   const wSign = negative ? doc.font(numFont).widthOfString('-') : 0;
   const wSym = doc.font(symFont).widthOfString(symbol);
