@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 
-export const metadata = { title: 'Page not found | HisabKhata' };
+export const metadata = { title: 'Page not found' };
 
 /** Shown for any address that does not exist, instead of the framework's bare 404. */
 export default function NotFound() {
