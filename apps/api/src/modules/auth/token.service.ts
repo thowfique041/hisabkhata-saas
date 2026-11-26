@@ -16,6 +16,13 @@ export interface IssuedTokens {
  * Access tokens: short-lived JWT (HS256). Refresh tokens: random opaque values stored only as
  * SHA-256 hashes, rotated on every use. Re-use of a rotated token revokes the whole family.
  */
+/** How long a just-rotated refresh token is still accepted, for concurrent refreshes. */
+const ROTATION_GRACE_MS = 30_000;
+
+type RefreshTokenRow = NonNullable<
+  Awaited<ReturnType<PrismaService['refreshToken']['findUnique']>>
+>;
+
 @Injectable()
 export class TokenService {
   constructor(
@@ -39,7 +46,9 @@ export class TokenService {
     familyId?: string,
   ): Promise<IssuedTokens & { tokenId: string }> {
     const refreshToken = randomToken(48);
-    const refreshExpiresAt = new Date(Date.now() + this.config.get('REFRESH_TOKEN_TTL_DAYS') * 86_400_000);
+    const refreshExpiresAt = new Date(
+      Date.now() + this.config.get('REFRESH_TOKEN_TTL_DAYS') * 86_400_000,
+    );
     const row = await this.prisma.refreshToken.create({
       data: {
         userId: user.id,
@@ -53,30 +62,45 @@ export class TokenService {
     });
     return {
       tokenId: row.id,
-      accessToken: this.signAccess({ sub: user.id, email: user.email, sa: user.isSuperAdmin, tid: tenantId }),
+      accessToken: this.signAccess({
+        sub: user.id,
+        email: user.email,
+        sa: user.isSuperAdmin,
+        tid: tenantId,
+      }),
       refreshToken,
       refreshExpiresAt,
       csrfToken: randomToken(24),
     };
   }
 
-  /** Validates and consumes a refresh token, returning its row. Detects replay. */
-  async consume(raw: string) {
+  /**
+   * Validates and consumes a refresh token, returning its row. Detects replay.
+   *
+   * Two tabs (or a page and a retry) often refresh at the same moment with the same token. The
+   * loser of that race presents a token that was rotated a moment ago; treating that as theft
+   * logged people out. Within a short grace window a just-rotated token is accepted once more
+   * (`concurrent: true`); outside it, or after logout, replay still revokes the whole family.
+   */
+  async consume(raw: string): Promise<RefreshTokenRow & { concurrent?: boolean }> {
     const row = await this.prisma.refreshToken.findUnique({ where: { tokenHash: sha256(raw) } });
     if (!row) throw new UnauthorizedException('Session expired');
+    if (row.expiresAt < new Date()) throw new UnauthorizedException('Session expired');
     if (row.revokedAt) {
+      if (row.replacedById && Date.now() - row.revokedAt.getTime() < ROTATION_GRACE_MS) {
+        return { ...row, concurrent: true };
+      }
       // A rotated token was presented again: assume theft and kill the whole session family.
       await this.revokeFamily(row.familyId);
       throw new UnauthorizedException('Session expired');
     }
-    if (row.expiresAt < new Date()) throw new UnauthorizedException('Session expired');
     const updated = await this.prisma.refreshToken.updateMany({
       where: { id: row.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
     if (updated.count === 0) {
-      await this.revokeFamily(row.familyId);
-      throw new UnauthorizedException('Session expired');
+      // Another request rotated this token between our read and write: the same race as above.
+      return { ...row, concurrent: true };
     }
     return row;
   }
@@ -86,11 +110,17 @@ export class TokenService {
   }
 
   async revokeFamily(familyId: string) {
-    await this.prisma.refreshToken.updateMany({ where: { familyId, revokedAt: null }, data: { revokedAt: new Date() } });
+    await this.prisma.refreshToken.updateMany({
+      where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
   async revokeAllForUser(userId: string) {
-    await this.prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
   async revokeByRaw(raw: string | undefined) {

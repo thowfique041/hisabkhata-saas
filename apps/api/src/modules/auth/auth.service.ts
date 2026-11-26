@@ -134,7 +134,8 @@ export class AuthService {
     if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('Session expired');
     const tenantId = await this.defaultTenantFor(user.id, old.tenantId);
     const issued = await this.tokens.issue(user, tenantId, meta, old.familyId);
-    await this.tokens.linkReplacement(old.id, issued.tokenId);
+    // Keep the first replacement link when this was the losing side of a concurrent refresh.
+    if (!old.concurrent) await this.tokens.linkReplacement(old.id, issued.tokenId);
     return issued;
   }
 
